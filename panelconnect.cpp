@@ -76,6 +76,25 @@ void PanelConnect::cmdGetLastLog()
 }
 
 /*
+ * Команда 0xD0 - начать калибровку поправок АЧХ
+ */
+void PanelConnect::cmdStartCalAfc(int cycles)
+{
+    QByteArray data;
+    data.append(QByteArray::fromRawData((char*)&cycles, sizeof(int)));
+    data.append(QByteArray::fromHex("01"));
+    panelSendCmd(PANEL_AFCCAL_SET_CONTROL, data);
+}
+
+/*
+ * Команда 0xD1 - запрос состяния калибровки поправок АЧХ
+ */
+void PanelConnect::cmdCalAfcGetStatus()
+{
+    panelSendCmd(PANEL_AFCCAL_GET_STATUS);
+}
+
+/*
  * Чтение ответного пакета из сокета и обработка ответа
  */
 void PanelConnect::processPendingDatagrams()
@@ -95,6 +114,10 @@ void PanelConnect::processPendingDatagrams()
  */
 void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
 {
+    int calibrate_afc_cnt;
+    EthLogErrorStructTypeDef* lastLog;
+    bool cal_done = false;
+
     quint8* data_rec = (quint8*)datagramRec.data();
     cmd_rec = data_rec[0];
     cmd_rec_status = data_rec[1];
@@ -116,11 +139,19 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
             case PANEL_MAIN_MODE_SET:
                 qDebug() << "Main mode is started...";
                 break;
+            case PANEL_AFCCAL_SET_CONTROL:
+                qDebug() << "Calibr process is started...";
+                break;
+            case PANEL_AFCCAL_GET_STATUS:
+                calibrate_afc_cnt = *((int*)&data_rec[2]);
+                cal_done = data_rec[18];
+                emit cmdCalAfcStatusReady(calibrate_afc_cnt, cal_done);
+                break;
             case PANEL_LAST_LOG_GET:
-                EthLogErrorStructTypeDef* lastLog =
-                        (EthLogErrorStructTypeDef*)&data_rec[2];
+                lastLog = (EthLogErrorStructTypeDef*)&data_rec[2];
                 qDebug("Last Error is: 0x%02X", lastLog->log.error);
                 break;
+
             }
         }
         else if (cmd_rec_status == PANEL_ERROR)

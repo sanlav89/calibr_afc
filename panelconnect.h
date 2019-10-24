@@ -19,6 +19,8 @@ public:
     void cmdMainModeSetParams();    // 0xB9
     void cmdMainModeSetFpga4080(bool ms40);  // 0xB6
     void cmdGetLastLog();           // 0xC9
+    void cmdStartCalAfc(int cycles);
+    void cmdCalAfcGetStatus();
 
 private:
     QUdpSocket* udpConnect;
@@ -30,6 +32,7 @@ private:
 
 signals:
     void cmdGetVersionReady();
+    void cmdCalAfcStatusReady(int, bool);
 
 private slots:
     void processPendingDatagrams();
