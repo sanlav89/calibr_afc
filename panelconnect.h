@@ -21,11 +21,14 @@ public:
     void cmdGetLastLog();           // 0xC9
     void cmdStartCalAfc(int cycles);
     void cmdCalAfcGetStatus();
+    void cmdCalAfcGetData(quint16 part_num);
 
 private:
     QUdpSocket* udpConnect;
     QHostAddress dissIPAddr;
     quint8 cmd_send, cmd_rec, cmd_rec_status;
+    quint16 part_num_send;
+    QByteArray calData;
 
     void panelSendCmd(quint8 cmd, QByteArray data = QByteArray());
     void panelAnswerProcess(QByteArray datagramRec);
@@ -33,6 +36,7 @@ private:
 signals:
     void cmdGetVersionReady();
     void cmdCalAfcStatusReady(int, bool);
+    void cmdCalAfcDataReady(QByteArray);
 
 private slots:
     void processPendingDatagrams();

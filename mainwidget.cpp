@@ -28,6 +28,7 @@ MainWidget::MainWidget(QWidget *parent)
     startBtn = new QPushButton("Start MainMode");
     getLastLogBtn = new QPushButton("Read ErrCode");
     startCalBtn = new QPushButton("Start Calibr.");
+    readCalBtn = new QPushButton("Read Calibr.");
     ms40Rb = new QRadioButton("40 ms");
     ms80Rb = new QRadioButton("80 ms");
     calCyclesLe = new QLineEdit("50");
@@ -38,6 +39,7 @@ MainWidget::MainWidget(QWidget *parent)
     gLayout->addWidget(ms80Rb, 2, 1, 1, 1);
     gLayout->addWidget(calCyclesLe, 3, 0, 1, 1);
     gLayout->addWidget(startCalBtn, 3, 1, 1, 1);
+    gLayout->addWidget(readCalBtn, 4, 0, 1, 2);
 
     setLayout(gLayout);
 //    setFixedSize(200, 100);
@@ -45,6 +47,7 @@ MainWidget::MainWidget(QWidget *parent)
     connect(startBtn, SIGNAL(clicked()), this, SLOT(onStartBtn()));
     connect(getLastLogBtn, SIGNAL(clicked()), this, SLOT(onGetLastLogBtn()));
     connect(startCalBtn, SIGNAL(clicked()), this, SLOT(onStartCalBtn()));
+    connect(readCalBtn, SIGNAL(clicked()), this, SLOT(onReadCalBtn()));
     connect(ms40Rb, SIGNAL(toggled(bool)), this, SLOT(onMs40Rb(bool)));
     connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
     connect(panel, SIGNAL(cmdCalAfcStatusReady(int, bool)),
@@ -81,6 +84,11 @@ void MainWidget::onStartCalBtn()
 void MainWidget::onTimeout()
 {
     panel->cmdCalAfcGetStatus();
+}
+
+void MainWidget::onReadCalBtn()
+{
+    panel->cmdCalAfcGetData(0);
 }
 
 void MainWidget::calAfcStatus(int cycles, bool done)

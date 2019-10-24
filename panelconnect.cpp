@@ -95,6 +95,16 @@ void PanelConnect::cmdCalAfcGetStatus()
 }
 
 /*
+ * Команда 0xD2 - запрос анных спектров калибровки
+ */
+void PanelConnect::cmdCalAfcGetData(quint16 part_num)
+{
+    part_num_send = part_num;
+    panelSendCmd(PANEL_AFCCAL_GET_DATA,
+                 QByteArray::fromRawData((char*)&part_num, 2));
+}
+
+/*
  * Чтение ответного пакета из сокета и обработка ответа
  */
 void PanelConnect::processPendingDatagrams()
@@ -117,6 +127,7 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
     int calibrate_afc_cnt;
     EthLogErrorStructTypeDef* lastLog;
     bool cal_done = false;
+    quint16 part_num_rec;
 
     quint8* data_rec = (quint8*)datagramRec.data();
     cmd_rec = data_rec[0];
@@ -147,6 +158,28 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
                 cal_done = data_rec[18];
                 emit cmdCalAfcStatusReady(calibrate_afc_cnt, cal_done);
                 break;
+
+            case PANEL_AFCCAL_GET_DATA:
+                part_num_rec = *((quint16*)&data_rec[66]);
+                if (part_num_rec == part_num_send) {
+                    if (part_num_rec == 0) {
+                        calData.resize(0);
+                    }
+                    calData.append(QByteArray::fromRawData(
+                                       (char*)&data_rec[2], 64));
+                    qDebug() << "Read part" << part_num_rec + 1 << "of" << 512;
+                    if (part_num_rec == 511) {
+                        emit cmdCalAfcDataReady(calData);
+                    }
+                    else {
+                        cmdCalAfcGetData(part_num_rec + 1);
+                    }
+                }
+                else {
+                    qDebug() << "Error of reading SRAM rart number";
+                }
+                break;
+
             case PANEL_LAST_LOG_GET:
                 lastLog = (EthLogErrorStructTypeDef*)&data_rec[2];
                 qDebug("Last Error is: 0x%02X", lastLog->log.error);

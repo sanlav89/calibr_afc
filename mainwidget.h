@@ -21,6 +21,7 @@ private:
     QPushButton* startBtn;
     QPushButton* getLastLogBtn;
     QPushButton* startCalBtn;
+    QPushButton* readCalBtn;
     QRadioButton* ms40Rb;
     QRadioButton* ms80Rb;
     QLineEdit* calCyclesLe;
@@ -32,6 +33,7 @@ private slots:
     void onStartCalBtn();
     void onTimeout();
     void onMs40Rb(bool ms40);
+    void onReadCalBtn();
     void calAfcStatus(int cycles, bool done);
 
 };
