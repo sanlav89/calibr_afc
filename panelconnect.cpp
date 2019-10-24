@@ -1,6 +1,9 @@
 #include "panelconnect.h"
 #include <QDebug>
 
+/*
+ * Создание объекта
+ */
 PanelConnect::PanelConnect(QObject *parent) : QObject(parent)
 {
     udpConnect = new QUdpSocket(this);
@@ -10,28 +13,37 @@ PanelConnect::PanelConnect(QObject *parent) : QObject(parent)
             this, SLOT(processPendingDatagrams()));
 }
 
+/*
+ * Отправка кода команды (cmd) с сопутствующими параметрами (data)
+ */
+void PanelConnect::panelSendCmd(quint8 cmd, QByteArray data)
+{
+    cmd_send = cmd;
+    data.prepend(QByteArray::fromRawData((char*)&cmd, 1));
+    udpConnect->writeDatagram(data, dissIPAddr, UDP_PORT_TELEM_MODE_OUT);
+}
+
+/*
+ * Команда 0xA0 - запрос версий ПО, CRC
+ */
 void PanelConnect::cmdGetVersion()
 {
-    QByteArray cmd_send_ba;
-    cmd_send = PANEL_BUILD_MK;
-    cmd_send_ba.append(QByteArray::fromRawData((char*)&cmd_send, 1));
-    udpConnect->writeDatagram(cmd_send_ba, dissIPAddr, UDP_PORT_TELEM_MODE_OUT);
+    panelSendCmd(PANEL_BUILD_MK);
 }
 
-// 0xAC
+/*
+ * Команда 0xAC - Выход в "технологический боевой" режим
+ */
 void PanelConnect::cmdMainModeStart()
 {
-    QByteArray cmd_send_ba;
-    cmd_send = PANEL_MAIN_MODE_SET;
-    cmd_send_ba.append(QByteArray::fromRawData((char*)&cmd_send, 1));
-    cmd_send_ba.append(QByteArray::fromHex("01"));
-    udpConnect->writeDatagram(cmd_send_ba, dissIPAddr, UDP_PORT_TELEM_MODE_OUT);
+    panelSendCmd(PANEL_MAIN_MODE_SET, QByteArray::fromHex("01"));
 }
 
-// 0xB9
+/*
+ * Команда 0xB9 - выставить параметры для "технологического боевого" режима
+ */
 void PanelConnect::cmdMainModeSetParams()
 {
-    QByteArray cmd_send_ba;
     TechModeUnion mainModeParams;
     mainModeParams.f.missStartControl = 1;
     mainModeParams.f.missLog = 1;
@@ -41,45 +53,46 @@ void PanelConnect::cmdMainModeSetParams()
     mainModeParams.f.banFpga40ms = 0;
     mainModeParams.f.banUseDAngles = 0;
     mainModeParams.f.startFpgaIn40 = 0;
-    cmd_send = PANEL_TECH_MODE_SET;
-    cmd_send_ba.append(QByteArray::fromRawData((char*)&cmd_send, 1));
-    cmd_send_ba.append(QByteArray::fromRawData((char*)&mainModeParams.v, 1));
-    udpConnect->writeDatagram(cmd_send_ba, dissIPAddr, UDP_PORT_TELEM_MODE_OUT);
+    panelSendCmd(PANEL_TECH_MODE_SET,
+                 QByteArray::fromRawData((char*)&mainModeParams.v, 1));
 }
 
-// 0xB6
+/*
+ * Команда 0xB6 - выставить режим накопления сигнала в ПЛИС (40 или 80 мс)
+ */
 void PanelConnect::cmdMainModeSetFpga4080(bool ms40)
 {
-    QByteArray cmd_send_ba;
-    cmd_send = PANEL_40_80_SET;
-    cmd_send_ba.append(QByteArray::fromRawData((char*)&cmd_send, 1));
-    if (ms40)
-        cmd_send_ba.append(QByteArray::fromHex("00"));
-    else
-        cmd_send_ba.append(QByteArray::fromHex("01"));
-    udpConnect->writeDatagram(cmd_send_ba, dissIPAddr, UDP_PORT_TELEM_MODE_OUT);
+    QByteArray data = ms40 ? QByteArray::fromHex("00") :
+                             QByteArray::fromHex("01");
+    panelSendCmd(PANEL_40_80_SET, data);
 }
 
-// 0xC9
+/*
+ * Команда 0xC9 - прочитать последний код ошибки (если ошибок не было - 0x00)
+ */
 void PanelConnect::cmdGetLastLog()
 {
-    QByteArray cmd_send_ba;
-    cmd_send = PANEL_LAST_LOG_GET;
-    cmd_send_ba.append(QByteArray::fromRawData((char*)&cmd_send, 1));
-    udpConnect->writeDatagram(cmd_send_ba, dissIPAddr, UDP_PORT_TELEM_MODE_OUT);
+    panelSendCmd(PANEL_LAST_LOG_GET);
 }
 
+/*
+ * Чтение ответного пакета из сокета и обработка ответа
+ */
 void PanelConnect::processPendingDatagrams()
 {
     QByteArray datagramRec;
+    // Чтение пакета из сокета
     while (udpConnect->hasPendingDatagrams()) {
         datagramRec.resize(udpConnect->pendingDatagramSize());
         udpConnect->readDatagram(datagramRec.data(), datagramRec.size());
     }
-
+    // Обработка ответа
     panelAnswerProcess(datagramRec);
 }
 
+/*
+ * Обработчик ответа от МПР
+ */
 void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
 {
     quint8* data_rec = (quint8*)datagramRec.data();

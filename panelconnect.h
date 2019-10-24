@@ -25,7 +25,7 @@ private:
     QHostAddress dissIPAddr;
     quint8 cmd_send, cmd_rec, cmd_rec_status;
 
-
+    void panelSendCmd(quint8 cmd, QByteArray data = QByteArray());
     void panelAnswerProcess(QByteArray datagramRec);
 
 signals:
