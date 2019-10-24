@@ -15,8 +15,10 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwidget.cpp \
-    panelconnect.cpp
+    panelconnect.cpp \
+    calibrator2.cpp
 
 HEADERS  += mainwidget.h \
     panelconnect.h \
-    disstypedef.h
+    disstypedef.h \
+    calibrator2.h

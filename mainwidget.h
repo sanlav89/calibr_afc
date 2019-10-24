@@ -7,6 +7,7 @@
 #include <QLineEdit>
 #include <QTimer>
 #include "panelconnect.h"
+#include "calibrator2.h"
 
 class MainWidget : public QWidget
 {
@@ -26,6 +27,7 @@ private:
     QRadioButton* ms80Rb;
     QLineEdit* calCyclesLe;
     QTimer* timer;
+    Calibrator2* calibrator;
 
 private slots:
     void onStartBtn();
@@ -35,6 +37,7 @@ private slots:
     void onMs40Rb(bool ms40);
     void onReadCalBtn();
     void calAfcStatus(int cycles, bool done);
+    void calAfcCalcAndSave(QByteArray data);
 
 };
 

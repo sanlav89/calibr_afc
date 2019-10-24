@@ -167,8 +167,8 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
                     }
                     calData.append(QByteArray::fromRawData(
                                        (char*)&data_rec[2], 64));
-                    qDebug() << "Read part" << part_num_rec + 1 << "of" << 512;
-                    if (part_num_rec == 511) {
+                    qDebug() << "Read part" << part_num_rec + 1 << "of" << 1024;
+                    if (part_num_rec == 1023) {
                         emit cmdCalAfcDataReady(calData);
                     }
                     else {

@@ -23,6 +23,8 @@ MainWidget::MainWidget(QWidget *parent)
     panel = new PanelConnect;
     panel->cmdGetVersion();
 
+    calibrator = new Calibrator2;
+
     timer = new QTimer;
 
     startBtn = new QPushButton("Start MainMode");
@@ -52,6 +54,8 @@ MainWidget::MainWidget(QWidget *parent)
     connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
     connect(panel, SIGNAL(cmdCalAfcStatusReady(int, bool)),
             this, SLOT(calAfcStatus(int, bool)));
+    connect(panel, SIGNAL(cmdCalAfcDataReady(QByteArray)),
+            this, SLOT(calAfcCalcAndSave(QByteArray)));
 }
 
 MainWidget::~MainWidget()
@@ -99,4 +103,12 @@ void MainWidget::calAfcStatus(int cycles, bool done)
         timer->stop();
         qDebug() << "Calibration spectrums are ready...";
     }
+}
+
+void MainWidget::calAfcCalcAndSave(QByteArray data)
+{
+    qDebug() << "Calibration calculating is started...";
+    calibrator->Calibrate(data, calCyclesLe->text().toInt());
+    calibrator->SaveCalibration();
+    qDebug() << "Calibration is saved";
 }
