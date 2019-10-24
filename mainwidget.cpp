@@ -1,9 +1,10 @@
 #include "mainwidget.h"
-#include "panelconnect.h"
 
 MainWidget::MainWidget(QWidget *parent)
     : QWidget(parent)
 {
+    panel = new PanelConnect;
+    panel->cmdGetVersion();
 }
 
 MainWidget::~MainWidget()
