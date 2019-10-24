@@ -4,6 +4,8 @@
 #include <QObject>
 #include <QUdpSocket>
 
+#include "disstypedef.h"
+
 #define UDP_PORT_TELEM_MODE_IN  (45454)
 #define UDP_PORT_TELEM_MODE_OUT (45454)
 
@@ -12,11 +14,19 @@ class PanelConnect : public QObject
     Q_OBJECT
 public:
     explicit PanelConnect(QObject *parent = 0);
-    void cmdGetVersion();
+    void cmdGetVersion();           // 0xA0
+    void cmdMainModeStart();        // 0xAC
+    void cmdMainModeSetParams();    // 0xB9
+    void cmdMainModeSetFpga4080(bool ms40);  // 0xB6
+    void cmdGetLastLog();           // 0xC9
 
 private:
     QUdpSocket* udpConnect;
     QHostAddress dissIPAddr;
+    quint8 cmd_send, cmd_rec, cmd_rec_status;
+
+
+    void panelAnswerProcess(QByteArray datagramRec);
 
 signals:
     void cmdGetVersionReady();

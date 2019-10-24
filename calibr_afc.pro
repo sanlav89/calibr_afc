@@ -18,4 +18,5 @@ SOURCES += main.cpp\
     panelconnect.cpp
 
 HEADERS  += mainwidget.h \
-    panelconnect.h
+    panelconnect.h \
+    disstypedef.h
