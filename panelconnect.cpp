@@ -93,7 +93,8 @@ void PanelConnect::cmdCalAfcSetCtrlGetStatus(int cycles, bool status)
         calibr_afc.calibr_en = 0;
         calibr_afc.cnt_max = 0;
     }
-    data.append(QByteArray::fromRawData((char*)&calibr_afc, sizeof(calibr_afc_s)));
+    data.append(QByteArray::fromRawData((char*)&calibr_afc,
+                                        sizeof(calibr_afc_s)));
     panelSendCmd(PANEL_AFCCAL_SETCTRL_GETSTAT, data);
 //    qDebug() << data.toHex();
 }
@@ -154,25 +155,21 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
             case PANEL_MAIN_MODE_SET:
                 qDebug() << "Main mode is started...";
                 break;
-//            case PANEL_AFCCAL_SETCTRL_GETSTAT:
-//                qDebug() << "Calibr process is started...";
-//                break;
             case PANEL_AFCCAL_SETCTRL_GETSTAT:
                 cal_done = data_rec[2];
                 calibrate_afc_cnt = *((int*)&data_rec[3]);
                 emit cmdCalAfcStatusReady(calibrate_afc_cnt, cal_done);
                 break;
-
             case PANEL_AFCCAL_GET_DATA:
-                part_num_rec = *((quint16*)&data_rec[66]);
+                part_num_rec = *((quint16*)&data_rec[2]);
                 if (part_num_rec == part_num_send) {
                     if (part_num_rec == 0) {
                         calData.resize(0);
                     }
                     calData.append(QByteArray::fromRawData(
-                                       (char*)&data_rec[2], 64));
-                    qDebug() << "Read part" << part_num_rec + 1 << "of" << 1024;
-                    if (part_num_rec == 1023) {
+                                       (char*)&data_rec[4], 64));
+                    qDebug() << "Read part" << part_num_rec + 1 << "of" << 512;
+                    if (part_num_rec == 511) {
                         emit cmdCalAfcDataReady(calData);
                     }
                     else {
@@ -180,7 +177,7 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
                     }
                 }
                 else {
-                    qDebug() << "Error of reading SRAM rart number";
+                    qDebug() << "Error of reading SRAM part number";
                 }
                 break;
 

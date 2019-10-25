@@ -23,11 +23,13 @@ private:
     QPushButton* getLastLogBtn;
     QPushButton* startCalBtn;
     QPushButton* readCalBtn;
+    QPushButton* calcAfcCalcBtn;
     QRadioButton* ms40Rb;
     QRadioButton* ms80Rb;
     QLineEdit* calCyclesLe;
     QTimer* timer;
     Calibrator2* calibrator;
+    QByteArray calData[2];
 
 private slots:
     void onStartBtn();
@@ -37,7 +39,8 @@ private slots:
     void onMs40Rb(bool ms40);
     void onReadCalBtn();
     void calAfcStatus(int cycles, bool done);
-    void calAfcCalcAndSave(QByteArray data);
+    void calAfcCalcAndSave();
+    void calAfcGetData(QByteArray data);
 
 };
 
