@@ -19,8 +19,7 @@ public:
     void cmdMainModeSetParams();    // 0xB9
     void cmdMainModeSetFpga4080(bool ms40);  // 0xB6
     void cmdGetLastLog();           // 0xC9
-    void cmdStartCalAfc(int cycles);
-    void cmdCalAfcGetStatus();
+    void cmdCalAfcSetCtrlGetStatus(int cycles, bool status);
     void cmdCalAfcGetData(quint16 part_num);
 
 private:

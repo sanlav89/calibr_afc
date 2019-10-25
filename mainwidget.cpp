@@ -81,13 +81,13 @@ void MainWidget::onMs40Rb(bool ms40)
 
 void MainWidget::onStartCalBtn()
 {
-    panel->cmdStartCalAfc(calCyclesLe->text().toInt());
+    panel->cmdCalAfcSetCtrlGetStatus(calCyclesLe->text().toInt(), false);
     timer->start(500);
 }
 
 void MainWidget::onTimeout()
 {
-    panel->cmdCalAfcGetStatus();
+    panel->cmdCalAfcSetCtrlGetStatus(0, true);
 }
 
 void MainWidget::onReadCalBtn()
