@@ -31,6 +31,7 @@ MainWidget::MainWidget(QWidget *parent)
     getLastLogBtn = new QPushButton("Read ErrCode");
     startCalBtn = new QPushButton("Start Calibr.");
     readCalBtn = new QPushButton("Read Calibr.");
+    calcAfcCalcBtn = new QPushButton("Perform Calibration");
     ms40Rb = new QRadioButton("40 ms");
     ms80Rb = new QRadioButton("80 ms");
     calCyclesLe = new QLineEdit("50");
@@ -42,6 +43,7 @@ MainWidget::MainWidget(QWidget *parent)
     gLayout->addWidget(calCyclesLe, 3, 0, 1, 1);
     gLayout->addWidget(startCalBtn, 3, 1, 1, 1);
     gLayout->addWidget(readCalBtn, 4, 0, 1, 2);
+    gLayout->addWidget(calcAfcCalcBtn, 5, 0, 1, 2);
 
     setLayout(gLayout);
 //    setFixedSize(200, 100);
@@ -55,7 +57,8 @@ MainWidget::MainWidget(QWidget *parent)
     connect(panel, SIGNAL(cmdCalAfcStatusReady(int, bool)),
             this, SLOT(calAfcStatus(int, bool)));
     connect(panel, SIGNAL(cmdCalAfcDataReady(QByteArray)),
-            this, SLOT(calAfcCalcAndSave(QByteArray)));
+            this, SLOT(calAfcGetData(QByteArray)));
+    connect(calcAfcCalcBtn, SIGNAL(clicked()), this, SLOT(calAfcCalcAndSave()));
 }
 
 MainWidget::~MainWidget()
@@ -81,13 +84,18 @@ void MainWidget::onMs40Rb(bool ms40)
 
 void MainWidget::onStartCalBtn()
 {
-    panel->cmdStartCalAfc(calCyclesLe->text().toInt());
+    if (ms40Rb->isChecked())
+        calData[1].resize(0);
+    if (ms80Rb->isChecked())
+        calData[0].resize(0);
+    panel->cmdCalAfcSetCtrlGetStatus(calCyclesLe->text().toInt(), false);
     timer->start(500);
+
 }
 
 void MainWidget::onTimeout()
 {
-    panel->cmdCalAfcGetStatus();
+    panel->cmdCalAfcSetCtrlGetStatus(0, true);
 }
 
 void MainWidget::onReadCalBtn()
@@ -105,10 +113,26 @@ void MainWidget::calAfcStatus(int cycles, bool done)
     }
 }
 
-void MainWidget::calAfcCalcAndSave(QByteArray data)
+void MainWidget::calAfcCalcAndSave()
 {
-    qDebug() << "Calibration calculating is started...";
-    calibrator->Calibrate(data, calCyclesLe->text().toInt());
-    calibrator->SaveCalibration();
-    qDebug() << "Calibration is saved";
+    QByteArray data;
+    data.append(calData[0]);
+    data.append(calData[1]);
+    if (data.size() == 65536) {
+        qDebug() << "Calibration calculating is started...";
+        calibrator->Calibrate(data, calCyclesLe->text().toInt());
+        calibrator->SaveCalibration();
+        qDebug() << "Calibration is saved";
+    }
+    else {
+        qDebug() << "Error! Wrong Data Size: " << data.size();
+    }
+}
+
+void MainWidget::calAfcGetData(QByteArray data)
+{
+    if (ms40Rb->isChecked())
+        calData[1] = data;
+    if (ms80Rb->isChecked())
+        calData[0] = data;
 }

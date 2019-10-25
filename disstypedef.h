@@ -80,7 +80,7 @@
 // Игнорирование IP, IS. Остальные включены.
 #define RK_STATUS_IP  (getRK_All() | 0xC0)
 // Выбранный режим РК.
-#define RK_GET        RK_STATUS_OK
+#define RK_GET        RK_STATUS_IP
 // Внутренний тест ПЛИС
 // #define FPGA_INTERN_TEST
 // Режим с включенным стартовым контролем.
@@ -100,7 +100,7 @@
 // Работа без ошибок пониженных шумов
 #define WITHOUT_SVCHMLOWNOISE   // [COMMENT]
 // Работа без UART.
-// #define WITHOUT_UART        // [COMMENT]
+#define WITHOUT_UART        // [COMMENT]
 // Работа без сторежевых таймеров.
 // #define WITHOUT_WDT         // [COMMENT]
 // Работа без температурного датчика.
@@ -108,7 +108,7 @@
 // Подключает пины для отладки.
 // #define EN_TESTING_PINS     // [COMMENT]
 // Использовение идеальных коэффициентов АЧХ.
-// #define USE_HARDCODE_COEFS  // [COMMENT]
+#define USE_HARDCODE_COEFS  // [COMMENT]
 // Расчет скоростей при помощи констант (если флеш не прошита)
 // #define USE_CONSTANT_ANGLES // [COMMENT]
 
@@ -1137,6 +1137,18 @@ typedef struct {
 } comp_coef_send_s;
 #pragma pack(pop)
 
+#pragma pack(push, 1)
+#ifdef __MINGW32__
+typedef struct __attribute__((gcc_struct, packed)) {
+#else   // !__MINGW32__
+typedef struct {
+#endif  // !__MINGW32__
+  uint8_t get_status_only : 1;
+  uint8_t calibr_en       : 1;
+  uint32_t cnt_max        : 30;
+} calibr_afc_s;
+#pragma pack(pop)
+
 // Состояния схемы проверки внешнего СТ
 typedef enum {
     STATE_IDLE  = 0,     // Начальное состояние
@@ -1593,8 +1605,8 @@ enum {
   PANEL_INDEX_MODULATION_GET,
   // A6 отправляет температуру 3х датчиков.
   PANEL_TEMPERATURE,
-  // A7 отправляет значение АЦП 3х датчиков.
-  PANEL_TEMPERATURE_RAW,
+  // A7 Установить параметры процесса калибровки АЧХ, прочитать состояние калибровки
+  PANEL_AFCCAL_SETCTRL_GETSTAT,
   // A8 отправляет 1 Кб журнала отказа.
   PANEL_LOG_ERROR_GET,
   // A9 очищает журнал отказа.
@@ -1607,8 +1619,8 @@ enum {
   PANEL_MAIN_MODE_SET,
   // AD возвращаем режим работы.
   PANEL_MAIN_MODE_GET,
-  // AE отправка версию FPGA.
-  PANEL_BUILD_FPGA,
+  // AE Запросить данные калибровки АЧХ (средние спектры)
+  PANEL_AFCCAL_GET_DATA,
   // AF Установка тестового сигнала.
   PANEL_TEST_SIGNAL_SET,
   // B0 Запросить параметр тестового сигнала.
@@ -1675,12 +1687,6 @@ enum {
   PANEL_TEST_TX,
   // CF Принять тестовое сообщение.
   PANEL_TEST_RX,
-  // D0 
-  PANEL_AFCCAL_SET_CONTROL,
-  // D1 
-  PANEL_AFCCAL_GET_STATUS,
-  // D2
-  PANEL_AFCCAL_GET_DATA,
   // Не команда! флаг макс команды.
   FLAG_PANEL_MAX
 };
