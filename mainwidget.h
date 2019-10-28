@@ -6,8 +6,12 @@
 #include <QRadioButton>
 #include <QLineEdit>
 #include <QTimer>
+#include <QGroupBox>
+#include <QLabel>
+#include <QSpinBox>
 #include "panelconnect.h"
 #include "calibrator2.h"
+#include "plotcalibr.h"
 
 class MainWidget : public QWidget
 {
@@ -19,17 +23,39 @@ public:
 
 private:
     PanelConnect* panel;
+
     QPushButton* startBtn;
     QPushButton* getLastLogBtn;
-    QPushButton* startCalBtn;
-    QPushButton* readCalBtn;
     QPushButton* calcAfcCalcBtn;
-    QRadioButton* ms40Rb;
-    QRadioButton* ms80Rb;
-    QLineEdit* calCyclesLe;
+
     QTimer* timer;
     Calibrator2* calibrator;
     QByteArray calData[2];
+
+    QGroupBox* techModeGb;
+    QPushButton* startTbMode;
+    QLabel* calCyclesLbl;
+    QLineEdit* calCyclesLe;
+    QLabel* mode4080Lbl;
+    QRadioButton* ms40Rb;
+    QRadioButton* ms80Rb;
+    QPushButton* startCalBtn;
+    QPushButton* readCalBtn;
+    QPushButton* resetMprBtn;
+
+    QGroupBox* graphicsGb;
+    QLabel* mode4080Lbl2;
+    QRadioButton* ms40Rb2;
+    QRadioButton* ms80Rb2;
+    QLabel* beamLbl;
+    QSpinBox* beamSb;
+    QPushButton* saveCalBtn;
+    QPushButton* clearCalBtn;
+
+    PlotCalibr* plotCalibr;
+
+    void initTechModeGb();
+    void initGraphicsGb();
 
 private slots:
     void onStartBtn();
