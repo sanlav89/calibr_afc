@@ -67,6 +67,10 @@ private:
     void performNoteToArpTable();
     // Отображение кривых на графике
     void setGraphData(bool ms40, quint8 b_num);
+    // Доступность элементов формы пользователю
+    void setEnableWidgets(bool en1, bool en2, bool en3, bool en4,
+                          bool en5, bool en6, bool en7, bool en8,
+                          bool en9, bool en10, bool en11, bool en12);
 
 private slots:
     void onCheckConnectBtn();

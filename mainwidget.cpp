@@ -276,107 +276,51 @@ void MainWidget::readPanelStatus(quint8 status)
     switch (status) {
     case ST_CONNECT_FAIL:
         statusMsg.append("Подключение...");
-        startTbModeBtn->setEnabled(false);
-        calCyclesLe->setEnabled(false);
-        ms80Rb->setEnabled(false);
-        ms40Rb->setEnabled(false);
-        startCalBtn->setEnabled(false);
-        readCalBtn->setEnabled(false);
-        resetMprBtn->setEnabled(false);
+        setEnableWidgets(false, false, false, false, false, false,
+                         false, true, true, true, true, true);
         break;
     case ST_CONNECT_READY:
         statusMsg.append("Подключение восстановлено");
-        startTbModeBtn->setEnabled(true);
-        calCyclesLe->setEnabled(false);
-        ms80Rb->setEnabled(false);
-        ms40Rb->setEnabled(false);
-        startCalBtn->setEnabled(false);
-        readCalBtn->setEnabled(false);
-        resetMprBtn->setEnabled(false);
+        setEnableWidgets(true, false, false, false, false, false,
+                         false, true, true, true, true, true);
         break;
     case ST_READY_TO_SET_4080MS:
         statusMsg.append("Запущен технологический боевой режим МПР. "
                          "Выберите режим: 40 или 80 мс");
-        startTbModeBtn->setEnabled(false);
-        calCyclesLe->setEnabled(false);
-        ms80Rb->setEnabled(true);
-        ms40Rb->setEnabled(true);
-        startCalBtn->setEnabled(false);
-        readCalBtn->setEnabled(false);
-        resetMprBtn->setEnabled(false);
+        setEnableWidgets(false, false, true, true, false, false,
+                         false, true, true, true, true, true);
         break;
     case ST_READY_TO_START_CALIBR:
         statusMsg.sprintf("Выбран режим %d мс. Введите количество "
                           "циклов и запустите процесс калибровки.",
                           80 - 40 * (int)(ms40Rb->isChecked()));
-        startTbModeBtn->setEnabled(false);
-        calCyclesLe->setEnabled(true);
-        ms80Rb->setEnabled(true);
-        ms40Rb->setEnabled(true);
-        startCalBtn->setEnabled(true);
-        readCalBtn->setEnabled(true);
-        resetMprBtn->setEnabled(false);
+        setEnableWidgets(false, true, true, true, true, true,
+                         false, true, true, true, true, true);
         break;
     case ST_ACCUM_CALIBR_PERFOMING:
         statusMsg.append("Выполняется процесс суммирования спектров...");
-        startTbModeBtn->setEnabled(false);
-        calCyclesLe->setEnabled(false);
-        ms80Rb->setEnabled(false);
-        ms40Rb->setEnabled(false);
-        startCalBtn->setEnabled(false);
-        readCalBtn->setEnabled(false);
-        resetMprBtn->setEnabled(false);
+        setEnableWidgets(false, false, false, false, false, false,
+                         false, true, true, true, true, true);
         break;
     case ST_READY_TO_READ_CALIBR_DATA:
         statusMsg.append("Процесс суммирования спектров завершен. Данные готовы"
                          " для чтения");
-        startTbModeBtn->setEnabled(false);
-        calCyclesLe->setEnabled(true);
-        ms80Rb->setEnabled(true);
-        ms40Rb->setEnabled(true);
-        startCalBtn->setEnabled(true);
-        readCalBtn->setEnabled(true);
-        resetMprBtn->setEnabled(false);
+        setEnableWidgets(false, true, true, true, true, true,
+                         false, true, true, true, true, true);
         break;
     case ST_READING_DATA_PERFOMING:
         statusMsg.append("Выполняется процесс чтения спектров...");
-        startTbModeBtn->setEnabled(false);
-        calCyclesLe->setEnabled(false);
-        ms80Rb->setEnabled(false);
-        ms40Rb->setEnabled(false);
-        startCalBtn->setEnabled(false);
-        readCalBtn->setEnabled(false);
-        resetMprBtn->setEnabled(false);
+        setEnableWidgets(false, false, false, false, false, false,
+                         false, true, true, true, true, true);
         break;
-//    case ST_READING_DATA_ERROR:
-//        statusMsg.append("ОШИБКА чтения данных из SRAM. Сбросьте МПР "
-//                         "и попробуйте все заново.");
-//        startTbModeBtn->setEnabled(false);
-//        calCyclesLe->setEnabled(false);
-//        ms80Rb->setEnabled(false);
-//        ms40Rb->setEnabled(false);
-//        startCalBtn->setEnabled(false);
-//        readCalBtn->setEnabled(false);
-//        resetMprBtn->setEnabled(true);
-//        break;
     case ST_READING_DATA_DONE:
         timer->stop();
         calAfcCalcAndSave();
         updateGraphics();
         statusMsg.append("Чтение спектров завершено. Проведите расчет "
                          "коэффициентов");
-        startTbModeBtn->setEnabled(false);
-        calCyclesLe->setEnabled(true);
-        ms80Rb->setEnabled(true);
-        ms40Rb->setEnabled(true);
-        startCalBtn->setEnabled(true);
-        readCalBtn->setEnabled(true);
-        resetMprBtn->setEnabled(false);
-        ms40Rb2->setEnabled(true);
-        ms80Rb2->setEnabled(true);
-        beamSb->setEnabled(true);
-        saveCalBtn->setEnabled(true);
-        clearCalBtn->setEnabled(true);
+        setEnableWidgets(false, true, true, true, true, true,
+                         false, true, true, true, true, true);
         break;
     }
 
@@ -414,4 +358,24 @@ void MainWidget::setGraphData(bool ms40, quint8 b_num)
 void MainWidget::updateGraphics()
 {
     setGraphData(ms40Rb2->isChecked(), beamSb->value() - 1);
+}
+
+void MainWidget::setEnableWidgets(
+        bool en1, bool en2, bool en3, bool en4,
+        bool en5, bool en6, bool en7, bool en8,
+        bool en9, bool en10, bool en11, bool en12
+        )
+{
+    startTbModeBtn->setEnabled(en1);
+    calCyclesLe->setEnabled(en2);
+    ms80Rb->setEnabled(en3);
+    ms40Rb->setEnabled(en4);
+    startCalBtn->setEnabled(en5);
+    readCalBtn->setEnabled(en6);
+    resetMprBtn->setEnabled(en7);
+    ms40Rb2->setEnabled(en8);
+    ms80Rb2->setEnabled(en9);
+    beamSb->setEnabled(en10);
+    saveCalBtn->setEnabled(en11);
+    clearCalBtn->setEnabled(en12);
 }

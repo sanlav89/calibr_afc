@@ -26,7 +26,6 @@ public:
     // КХ в файлы
     void SaveCalibration(bool saveDbgInfo = true);
     // Максимальное значение поправочной характеристики АЧХ
-//    double GetMaxCompAfc();
 
 private:
     // Усредненные (суммарные) спектры калибровки по каждому лучу для каждого
@@ -44,7 +43,6 @@ private:
     // Максимум и минимум spectr_smooth
     double spectr_smooth_max;
     double spectr_smooth_min;
-//    double comp_afc_max[ACCUM_MODES][B_NUM_MAX];
     // Сглаживание среднего спектра калибровки и поиск минимума, максимума
     void Smooth(uint8_t ms40, uint8_t b_num, bool smoothEn);
     // Заполнение 0-го (512-го) отсчета спектра

@@ -197,12 +197,6 @@ void Calibrator2::SaveCalibration(bool saveDbgInfo)
     }
 }
 
-//// Максимальное значение поправочной характеристики АЧХ
-//double Calibrator2::GetMaxCompAfc()
-//{
-
-//}
-
 // Заполнение 0-го (512-го) отсчета спектра
 // Заполняется средним по 10 соседним отсчетам
 void Calibrator2::FillSample0(uint8_t ms40, uint8_t b_num)
