@@ -9,9 +9,11 @@
 #include <QGroupBox>
 #include <QLabel>
 #include <QSpinBox>
+#include <QProgressBar>
 #include "panelconnect.h"
 #include "calibrator2.h"
 #include "plotcalibr.h"
+#include "helpers.h"
 
 class MainWidget : public QWidget
 {
@@ -23,17 +25,12 @@ public:
 
 private:
     PanelConnect* panel;
-
-    QPushButton* startBtn;
-    QPushButton* getLastLogBtn;
-    QPushButton* calcAfcCalcBtn;
-
     QTimer* timer;
     Calibrator2* calibrator;
     QByteArray calData[2];
 
     QGroupBox* techModeGb;
-    QPushButton* startTbMode;
+    QPushButton* startTbModeBtn;
     QLabel* calCyclesLbl;
     QLineEdit* calCyclesLe;
     QLabel* mode4080Lbl;
@@ -42,6 +39,7 @@ private:
     QPushButton* startCalBtn;
     QPushButton* readCalBtn;
     QPushButton* resetMprBtn;
+//    QPushButton* getLastLogBtn;
 
     QGroupBox* graphicsGb;
     QLabel* mode4080Lbl2;
@@ -53,12 +51,20 @@ private:
     QPushButton* clearCalBtn;
 
     PlotCalibr* plotCalibr;
+    QProgressBar* progressBar;
+    QLabel* statusLbl;
 
-    void initTechModeGb();
-    void initGraphicsGb();
+
+
+    void initWidgetTechModeGb();
+    void initWidgetGraphicsGb();
+    void initWidgetOther();
+    void initMainLayout();
+    void initFunctionalModels();
+    void performNoteToArpTable();
 
 private slots:
-    void onStartBtn();
+    void onStartTbModeBtn();
     void onGetLastLogBtn();
     void onStartCalBtn();
     void onTimeout();
@@ -67,6 +73,7 @@ private slots:
     void calAfcStatus(int cycles, bool done);
     void calAfcCalcAndSave();
     void calAfcGetData(QByteArray data);
+    void statusMessage(QString msg);
 
 };
 

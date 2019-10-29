@@ -23,7 +23,8 @@ HEADERS  += mainwidget.h \
     panelconnect.h \
     disstypedef.h \
     calibrator2.h \
-    plotcalibr.h
+    plotcalibr.h \
+    helpers.h
 
 INCLUDEPATH += C:/qwt-6.1.3/include
 LIBS += -LC:/qwt-6.1.3/lib -lqwt
