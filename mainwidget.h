@@ -24,11 +24,8 @@ public:
     ~MainWidget();
 
 private:
-    PanelConnect* panel;
-    QTimer* timer;
-    Calibrator2* calibrator;
-    QByteArray calData[2];
-
+    // Объекты формы для работы с МПР в технологическом режиме
+    QPushButton* checkConnectBtn;
     QGroupBox* techModeGb;
     QPushButton* startTbModeBtn;
     QLabel* calCyclesLbl;
@@ -40,7 +37,7 @@ private:
     QPushButton* readCalBtn;
     QPushButton* resetMprBtn;
 //    QPushButton* getLastLogBtn;
-
+    // Объекты формы для расчета калибровки
     QGroupBox* graphicsGb;
     QLabel* mode4080Lbl2;
     QRadioButton* ms40Rb2;
@@ -49,31 +46,38 @@ private:
     QSpinBox* beamSb;
     QPushButton* saveCalBtn;
     QPushButton* clearCalBtn;
-
+    // Остальные объекты формы
     PlotCalibr* plotCalibr;
     QProgressBar* progressBar;
     QLabel* statusLbl;
-
-
-
+    // Функциональные объекты
+    PanelConnect* panel;
+    QTimer* timer;
+    Calibrator2* calibrator;
+    QByteArray calData[2];
+    // Инициализация объектов
     void initWidgetTechModeGb();
     void initWidgetGraphicsGb();
     void initWidgetOther();
     void initMainLayout();
     void initFunctionalModels();
+    // Выполнение записи в ARP-таблицу
     void performNoteToArpTable();
 
 private slots:
+    void onCheckConnectBtn();
     void onStartTbModeBtn();
     void onGetLastLogBtn();
     void onStartCalBtn();
     void onTimeout();
     void onMs40Rb(bool ms40);
+    void onMs80Rb(bool ms80);
     void onReadCalBtn();
     void calAfcStatus(int cycles, bool done);
     void calAfcCalcAndSave();
     void calAfcGetData(QByteArray data);
-    void statusMessage(QString msg);
+    void calAfcReadDataPart(quint16 partNum);
+    void readPanelStatus(quint8);
 
 };
 

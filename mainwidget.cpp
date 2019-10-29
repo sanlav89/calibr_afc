@@ -12,11 +12,12 @@ MainWidget::MainWidget(QWidget *parent)
     initMainLayout();
     initFunctionalModels();
     performNoteToArpTable();
+    calData[0].resize(32768);
+    calData[1].resize(32768);
 }
 
 MainWidget::~MainWidget()
 {
-
 }
 
 void MainWidget::initWidgetTechModeGb()
@@ -31,25 +32,38 @@ void MainWidget::initWidgetTechModeGb()
     startCalBtn = new QPushButton("Запустить\n режим\n калибровки");
     readCalBtn = new QPushButton("Прочитать\n память");
     resetMprBtn = new QPushButton("Сбросить\n МПР");
+    checkConnectBtn = new QPushButton("Проверить\n соединение");
     // Init Object's Properties
+    startTbModeBtn->setEnabled(false);
+    calCyclesLe->setEnabled(false);
+    ms80Rb->setEnabled(false);
+    ms40Rb->setEnabled(false);
+//    ms40Rb->setChecked(true);
+    startCalBtn->setEnabled(false);
+    readCalBtn->setEnabled(false);
+    resetMprBtn->setEnabled(false);
 
     // Init Object's Locations
     techModeGb = new QGroupBox(tr("Технологический режим"));
     QGridLayout *techModeLayout = new QGridLayout(techModeGb);
-    techModeLayout->addWidget(startTbModeBtn,   0, 0, 1, 2);
-    techModeLayout->addWidget(calCyclesLbl,     1, 0, 1, 2);
-    techModeLayout->addWidget(calCyclesLe,      2, 0, 1, 2);
-    techModeLayout->addWidget(mode4080Lbl,      3, 0, 1, 2);
-    techModeLayout->addWidget(ms40Rb,           4, 0, 1, 1);
-    techModeLayout->addWidget(ms80Rb,           4, 1, 1, 1);
-    techModeLayout->addWidget(startCalBtn,      5, 0, 1, 2);
-    techModeLayout->addWidget(readCalBtn,       6, 0, 1, 2);
-    techModeLayout->addWidget(resetMprBtn,      7, 0, 1, 2);
+    techModeLayout->addWidget(checkConnectBtn,  0, 0, 1, 2);
+    techModeLayout->addWidget(startTbModeBtn,   1, 0, 1, 2);
+    techModeLayout->addWidget(mode4080Lbl,      2, 0, 1, 2);
+    techModeLayout->addWidget(ms40Rb,           3, 0, 1, 1);
+    techModeLayout->addWidget(ms80Rb,           3, 1, 1, 1);
+    techModeLayout->addWidget(calCyclesLbl,     4, 0, 1, 2);
+    techModeLayout->addWidget(calCyclesLe,      5, 0, 1, 2);
+    techModeLayout->addWidget(startCalBtn,      6, 0, 1, 2);
+    techModeLayout->addWidget(readCalBtn,       7, 0, 1, 2);
+    techModeLayout->addWidget(resetMprBtn,      8, 0, 1, 2);
     // Init Object's connections
+    connect(checkConnectBtn, SIGNAL(clicked()),
+            this, SLOT(onCheckConnectBtn()));
     connect(startTbModeBtn, SIGNAL(clicked()), this, SLOT(onStartTbModeBtn()));
     connect(startCalBtn, SIGNAL(clicked()), this, SLOT(onStartCalBtn()));
     connect(readCalBtn, SIGNAL(clicked()), this, SLOT(onReadCalBtn()));
     connect(ms40Rb, SIGNAL(toggled(bool)), this, SLOT(onMs40Rb(bool)));
+    connect(ms80Rb, SIGNAL(toggled(bool)), this, SLOT(onMs80Rb(bool)));
 //    connect(getLastLogBtn, SIGNAL(clicked()), this, SLOT(onGetLastLogBtn()));
 }
 
@@ -64,7 +78,13 @@ void MainWidget::initWidgetGraphicsGb()
     saveCalBtn = new QPushButton("Сохранить\n калибровку");
     clearCalBtn = new QPushButton("Очистить\n калибровку");
     // Init Object's Properties
+    ms40Rb2->setEnabled(false);
+    ms40Rb2->setChecked(true);
+    ms80Rb2->setEnabled(false);
     beamSb->setRange(1, 4);
+    beamSb->setEnabled(false);
+    saveCalBtn->setEnabled(false);
+    clearCalBtn->setEnabled(false);
     // Init Object's Locations
     graphicsGb = new QGroupBox(tr("Расчет / Графики"));
     QGridLayout *graphicsLayout = new QGridLayout(graphicsGb);
@@ -117,6 +137,7 @@ void MainWidget::initFunctionalModels()
     calibrator = new Calibrator2;
     timer = new QTimer;
     // Init Object's Properties
+    readPanelStatus(ST_CONNECT_FAIL);
     panel->cmdGetVersion();
     // Init Object's connections
     connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
@@ -124,6 +145,10 @@ void MainWidget::initFunctionalModels()
             this, SLOT(calAfcStatus(int, bool)));
     connect(panel, SIGNAL(cmdCalAfcDataReady(QByteArray)),
             this, SLOT(calAfcGetData(QByteArray)));
+    connect(panel, SIGNAL(panelStatus(quint8)),
+            this, SLOT(readPanelStatus(quint8)));
+    connect(panel, SIGNAL(cmdCalAfcGetDataPartReady(quint16)),
+            this, SLOT(calAfcReadDataPart(quint16)));
 }
 
 void MainWidget::performNoteToArpTable()
@@ -142,6 +167,12 @@ void MainWidget::performNoteToArpTable()
     prog->deleteLater();
 }
 
+void MainWidget::onCheckConnectBtn()
+{
+    panel->cmdGetVersion();
+    qDebug() << "Check connect";
+}
+
 void MainWidget::onStartTbModeBtn()
 {
 //    panel->cmdMainModeStart();
@@ -158,32 +189,48 @@ void MainWidget::onMs40Rb(bool ms40)
     panel->cmdMainModeSetFpga4080(ms40);
 }
 
+void MainWidget::onMs80Rb(bool ms80)
+{
+    panel->cmdMainModeSetFpga4080(!ms80);
+}
+
 void MainWidget::onStartCalBtn()
 {
-    if (ms40Rb->isChecked())
-        calData[1].resize(0);
-    if (ms80Rb->isChecked())
-        calData[0].resize(0);
+//    if (ms40Rb->isChecked())
+//        calData[1].resize(0);
+//    if (ms80Rb->isChecked())
+//        calData[0].resize(0);
     panel->cmdCalAfcSetCtrlGetStatus(calCyclesLe->text().toInt(), false);
+    progressBar->setRange(0, calCyclesLe->text().toInt());
     timer->start(500);
-
 }
 
 void MainWidget::onTimeout()
 {
-    panel->cmdCalAfcSetCtrlGetStatus(0, true);
+    switch (panel->getStatus()) {
+    case ST_ACCUM_CALIBR_PERFOMING:
+        panel->cmdCalAfcSetCtrlGetStatus(0, true);
+        break;
+    case ST_READING_DATA_PERFOMING:
+        panel->cmdCalAfcGetDataRepeat();
+        break;
+    }
 }
 
 void MainWidget::onReadCalBtn()
 {
     panel->cmdCalAfcGetData(0);
+    progressBar->setRange(0, 511);
+    timer->start(500);
 }
 
 void MainWidget::calAfcStatus(int cycles, bool done)
 {
     qDebug("Cycles %d / %d, done: %d",
            cycles, calCyclesLe->text().toInt(), done);
+    progressBar->setValue(cycles);
     if (done) {
+        progressBar->setValue(calCyclesLe->text().toInt());
         timer->stop();
         qDebug() << "Calibration spectrums are ready...";
     }
@@ -213,7 +260,119 @@ void MainWidget::calAfcGetData(QByteArray data)
         calData[0] = data;
 }
 
-void MainWidget::statusMessage(QString msg)
+void MainWidget::calAfcReadDataPart(quint16 partNum)
 {
-    statusLbl->setText(msg);
+    progressBar->setValue(partNum);
+}
+
+
+void MainWidget::readPanelStatus(quint8 status)
+{
+    QString statusMsg;
+    switch (status) {
+    case ST_CONNECT_FAIL:
+        statusMsg.append("Подключение...");
+        startTbModeBtn->setEnabled(false);
+        calCyclesLe->setEnabled(false);
+        ms80Rb->setEnabled(false);
+        ms40Rb->setEnabled(false);
+        startCalBtn->setEnabled(false);
+        readCalBtn->setEnabled(false);
+        resetMprBtn->setEnabled(false);
+        break;
+    case ST_CONNECT_READY:
+        statusMsg.append("Подключение восстановлено");
+        startTbModeBtn->setEnabled(true);
+        calCyclesLe->setEnabled(false);
+        ms80Rb->setEnabled(false);
+        ms40Rb->setEnabled(false);
+        startCalBtn->setEnabled(false);
+        readCalBtn->setEnabled(false);
+        resetMprBtn->setEnabled(false);
+        break;
+    case ST_READY_TO_SET_4080MS:
+        statusMsg.append("Запущен технологический боевой режим МПР. "
+                         "Выберите режим: 40 или 80 мс");
+        startTbModeBtn->setEnabled(false);
+        calCyclesLe->setEnabled(false);
+        ms80Rb->setEnabled(true);
+        ms40Rb->setEnabled(true);
+        startCalBtn->setEnabled(false);
+        readCalBtn->setEnabled(false);
+        resetMprBtn->setEnabled(false);
+        break;
+    case ST_READY_TO_START_CALIBR:
+        statusMsg.sprintf("Выбран режим %d мс. Введите количество "
+                          "циклов и запустите процесс калибровки.",
+                          80 - 40 * (int)(ms40Rb->isChecked()));
+        startTbModeBtn->setEnabled(false);
+        calCyclesLe->setEnabled(true);
+        ms80Rb->setEnabled(true);
+        ms40Rb->setEnabled(true);
+        startCalBtn->setEnabled(true);
+        readCalBtn->setEnabled(true);
+        resetMprBtn->setEnabled(false);
+        break;
+    case ST_ACCUM_CALIBR_PERFOMING:
+        statusMsg.append("Выполняется процесс суммирования спектров...");
+        startTbModeBtn->setEnabled(false);
+        calCyclesLe->setEnabled(false);
+        ms80Rb->setEnabled(false);
+        ms40Rb->setEnabled(false);
+        startCalBtn->setEnabled(false);
+        readCalBtn->setEnabled(false);
+        resetMprBtn->setEnabled(false);
+        break;
+    case ST_READY_TO_READ_CALIBR_DATA:
+        statusMsg.append("Процесс суммирования спектров завершен. Данные готовы"
+                         " для чтения");
+        startTbModeBtn->setEnabled(false);
+        calCyclesLe->setEnabled(true);
+        ms80Rb->setEnabled(true);
+        ms40Rb->setEnabled(true);
+        startCalBtn->setEnabled(true);
+        readCalBtn->setEnabled(true);
+        resetMprBtn->setEnabled(false);
+        break;
+    case ST_READING_DATA_PERFOMING:
+        statusMsg.append("Выполняется процесс чтения спектров...");
+        startTbModeBtn->setEnabled(false);
+        calCyclesLe->setEnabled(false);
+        ms80Rb->setEnabled(false);
+        ms40Rb->setEnabled(false);
+        startCalBtn->setEnabled(false);
+        readCalBtn->setEnabled(false);
+        resetMprBtn->setEnabled(false);
+        break;
+//    case ST_READING_DATA_ERROR:
+//        statusMsg.append("ОШИБКА чтения данных из SRAM. Сбросьте МПР "
+//                         "и попробуйте все заново.");
+//        startTbModeBtn->setEnabled(false);
+//        calCyclesLe->setEnabled(false);
+//        ms80Rb->setEnabled(false);
+//        ms40Rb->setEnabled(false);
+//        startCalBtn->setEnabled(false);
+//        readCalBtn->setEnabled(false);
+//        resetMprBtn->setEnabled(true);
+//        break;
+    case ST_READING_DATA_DONE:
+        timer->stop();
+        statusMsg.append("Чтение спектров завершено. Проведите расчет "
+                         "коэффициентов");
+        startTbModeBtn->setEnabled(false);
+        calCyclesLe->setEnabled(true);
+        ms80Rb->setEnabled(true);
+        ms40Rb->setEnabled(true);
+        startCalBtn->setEnabled(true);
+        readCalBtn->setEnabled(true);
+        resetMprBtn->setEnabled(false);
+        ms40Rb2->setEnabled(true);
+        ms80Rb2->setEnabled(true);
+        beamSb->setEnabled(true);
+        saveCalBtn->setEnabled(true);
+        clearCalBtn->setEnabled(true);
+        break;
+    }
+
+    statusLbl->setText(statusMsg);
 }
