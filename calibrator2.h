@@ -19,12 +19,14 @@ public:
     // Загрузить данные средних спектров калибровки и откалибровать АЧХ
     void Calibrate(QByteArray data, int cal_count);
     // Вернуть указатель на средние спектры калибровки
-    double* GetSrcSpectrums();
+    double* GetSrcSpectrums(quint8 ms40, quint8 b_num);
     // Вернуть указатель на поправочную характеристику АЧХ
-    double* GetCompAfc();
+    double* GetCompAfc(quint8 ms40, quint8 b_num);
     // Сохранить коэффициенты комп. АЧХ и соответствующие поправки к идеальной
     // КХ в файлы
     void SaveCalibration(bool saveDbgInfo = true);
+    // Максимальное значение поправочной характеристики АЧХ
+//    double GetMaxCompAfc();
 
 private:
     // Усредненные (суммарные) спектры калибровки по каждому лучу для каждого
@@ -42,6 +44,7 @@ private:
     // Максимум и минимум spectr_smooth
     double spectr_smooth_max;
     double spectr_smooth_min;
+//    double comp_afc_max[ACCUM_MODES][B_NUM_MAX];
     // Сглаживание среднего спектра калибровки и поиск минимума, максимума
     void Smooth(uint8_t ms40, uint8_t b_num, bool smoothEn);
     // Заполнение 0-го (512-го) отсчета спектра

@@ -97,6 +97,8 @@ void MainWidget::initWidgetGraphicsGb()
     graphicsLayout->addWidget(clearCalBtn,  4, 0, 1, 2);
     // Init Object's connections
 //    connect(calcAfcCalcBtn, SIGNAL(clicked()), this, SLOT(calAfcCalcAndSave()));
+    connect(beamSb, SIGNAL(valueChanged(int)), this, SLOT(updateGraphics()));
+    connect(ms40Rb2, SIGNAL(toggled(bool)), this, SLOT(updateGraphics()));
 }
 
 void MainWidget::initWidgetOther()
@@ -121,11 +123,11 @@ void MainWidget::initWidgetOther()
 void MainWidget::initMainLayout()
 {
     QGridLayout* mainLayout = new QGridLayout;
-    mainLayout->addWidget(techModeGb,  0, 0, 1, 1);
-    mainLayout->addWidget(graphicsGb,  1, 0, 1, 1);
-    mainLayout->addWidget(plotCalibr,  0, 1, 2, 9);
-    mainLayout->addWidget(progressBar, 2, 0, 1, 10);
-    mainLayout->addWidget(statusLbl,   3, 0, 1, 10);
+    mainLayout->addWidget(techModeGb,  0, 0, 10, 1);
+    mainLayout->addWidget(graphicsGb,  10, 0, 6, 1);
+    mainLayout->addWidget(plotCalibr,  0, 1, 16, 9);
+    mainLayout->addWidget(progressBar, 16, 0, 1, 10);
+    mainLayout->addWidget(statusLbl,   17, 0, 1, 10);
     setLayout(mainLayout);
     setWindowTitle("Калибровка АЧХ");
 }
@@ -147,6 +149,8 @@ void MainWidget::initFunctionalModels()
             this, SLOT(calAfcGetData(QByteArray)));
     connect(panel, SIGNAL(panelStatus(quint8)),
             this, SLOT(readPanelStatus(quint8)));
+    connect(panel, SIGNAL(cmdCalAfcGetDataPartReady(quint16)),
+            this, SLOT(calAfcReadDataPart(quint16)));
     connect(panel, SIGNAL(cmdCalAfcGetDataPartReady(quint16)),
             this, SLOT(calAfcReadDataPart(quint16)));
 }
@@ -357,6 +361,8 @@ void MainWidget::readPanelStatus(quint8 status)
 //        break;
     case ST_READING_DATA_DONE:
         timer->stop();
+        calAfcCalcAndSave();
+        updateGraphics();
         statusMsg.append("Чтение спектров завершено. Проведите расчет "
                          "коэффициентов");
         startTbModeBtn->setEnabled(false);
@@ -375,4 +381,37 @@ void MainWidget::readPanelStatus(quint8 status)
     }
 
     statusLbl->setText(statusMsg);
+}
+
+void MainWidget::setGraphData(bool ms40, quint8 b_num)
+{
+    double freqscale[1024];
+    double dataY[2][1024];
+    double F = DFF / (2 - (int)ms40);
+    double* pSpecData = calibrator->GetSrcSpectrums((quint8)ms40, b_num);
+    double* pCompData = calibrator->GetCompAfc((quint8)ms40, b_num);
+    double ymin, ymax;
+
+    ymin = 10 * log10(pSpecData[CUT_AFC_POS] * pCompData[CUT_AFC_POS] / 2);
+    ymax = 10 * log10(pSpecData[CUT_AFC_POS]);
+    for (int i = 0; i < 1024; i++) {
+        freqscale[i] = -F / 2 + i * F / 1024;
+        dataY[0][i] = 10 * log10(pSpecData[i]);
+        dataY[1][i] = 10 * log10(pSpecData[i] * pCompData[i] / 2);
+        if (i >= CUT_AFC_POS && i < FFT_LENGTH - CUT_AFC_POS) {
+            if (dataY[0][i] > ymax) {
+                ymax = dataY[0][i];
+            }
+            if (dataY[1][i] < ymin) {
+                ymin = dataY[1][i];
+            }
+        }
+    }
+    plotCalibr->UpdateCurves(freqscale, dataY);
+    plotCalibr->SetScale(-F / 2, F / 2, ymin - 1, ymax + 1);
+}
+
+void MainWidget::updateGraphics()
+{
+    setGraphData(ms40Rb2->isChecked(), beamSb->value() - 1);
 }

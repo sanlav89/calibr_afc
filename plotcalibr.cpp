@@ -47,4 +47,33 @@ PlotCalibr::PlotCalibr(
         t.setFont(QFont("Courier", 10));
         setAxisTitle(QwtPlot::yLeft, t);
     }
+
+    // Инициализация кривых
+    QPen curvePen[2] = {
+        QPen(Qt::cyan),
+        QPen(Qt::green)
+    };
+    for (int i = 0; i < 2; i++) {
+        curves[i] = new QwtPlotCurve();
+        curves[i]->setStyle(QwtPlotCurve::Lines);
+        curves[i]->attach(this);
+        curves[i]->setPen(curvePen[i]);
+    }
+}
+
+// Установить масштаб осей координат
+void PlotCalibr::SetScale(double Xmin, double Xmax, double Ymin, double Ymax)
+{
+    setAxisScale(QwtPlot::xBottom, Xmin, Xmax);
+    setAxisScale(QwtPlot::yLeft, Ymin, Ymax);
+    replot();
+}
+
+void PlotCalibr::UpdateCurves(double dataX[1024], double dataY[2][1024])
+{
+    // Обновление кривых
+    for (int i = 0; i < 2; i++) {
+        curves[i]->setSamples(dataX, &dataY[i][0], 1024);
+        replot();
+    }
 }

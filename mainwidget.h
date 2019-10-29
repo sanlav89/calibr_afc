@@ -15,6 +15,8 @@
 #include "plotcalibr.h"
 #include "helpers.h"
 
+#define DFF                 (1000000.0 / 39.0)      // Разрешение спектра
+
 class MainWidget : public QWidget
 {
     Q_OBJECT
@@ -63,6 +65,8 @@ private:
     void initFunctionalModels();
     // Выполнение записи в ARP-таблицу
     void performNoteToArpTable();
+    // Отображение кривых на графике
+    void setGraphData(bool ms40, quint8 b_num);
 
 private slots:
     void onCheckConnectBtn();
@@ -78,6 +82,8 @@ private slots:
     void calAfcGetData(QByteArray data);
     void calAfcReadDataPart(quint16 partNum);
     void readPanelStatus(quint8);
+    void updateGraphics();
+
 
 };
 

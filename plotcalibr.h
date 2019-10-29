@@ -18,6 +18,13 @@ public:
                QColor beginColor,
                QColor endColor,
                QWidget * parent = NULL);
+    void UpdateCurves(double dataX[1024], double dataY[2][1024]);
+    // Установка масштаба
+    void SetScale(double Xmin, double Xmax,
+                  double Ymin, double Ymax);
+
+private:
+    QwtPlotCurve* curves[2];
 };
 
 
