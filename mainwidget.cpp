@@ -6,14 +6,20 @@
 MainWidget::MainWidget(QWidget *parent)
     : QWidget(parent)
 {
+    // Инициализация объектов формы
     initWidgetTechModeGb();
     initWidgetGraphicsGb();
     initWidgetOther();
     initMainLayout();
+    // Инициализация функциональных объектов
     initFunctionalModels();
+    // Запись в ARP-таблицу
     performNoteToArpTable();
+    // Установка размера данных джля выполнения калибровки
     calData[0].resize(32768);
     calData[1].resize(32768);
+    // Проверка соединения
+    onCheckConnectBtn();
 }
 
 MainWidget::~MainWidget()
@@ -38,10 +44,9 @@ void MainWidget::initWidgetTechModeGb()
     calCyclesLe->setEnabled(false);
     ms80Rb->setEnabled(false);
     ms40Rb->setEnabled(false);
-//    ms40Rb->setChecked(true);
     startCalBtn->setEnabled(false);
     readCalBtn->setEnabled(false);
-    resetMprBtn->setEnabled(false);
+    resetMprBtn->setEnabled(true);
 
     // Init Object's Locations
     techModeGb = new QGroupBox(tr("Технологический режим"));
@@ -64,7 +69,7 @@ void MainWidget::initWidgetTechModeGb()
     connect(readCalBtn, SIGNAL(clicked()), this, SLOT(onReadCalBtn()));
     connect(ms40Rb, SIGNAL(toggled(bool)), this, SLOT(onMs40Rb(bool)));
     connect(ms80Rb, SIGNAL(toggled(bool)), this, SLOT(onMs80Rb(bool)));
-//    connect(getLastLogBtn, SIGNAL(clicked()), this, SLOT(onGetLastLogBtn()));
+    connect(resetMprBtn, SIGNAL(clicked()), this, SLOT(onResetMprBtn()));
 }
 
 void MainWidget::initWidgetGraphicsGb()
@@ -76,7 +81,6 @@ void MainWidget::initWidgetGraphicsGb()
     beamLbl = new QLabel("Луч:");
     beamSb = new QSpinBox;
     saveCalBtn = new QPushButton("Сохранить\n калибровку");
-    clearCalBtn = new QPushButton("Очистить\n калибровку");
     // Init Object's Properties
     ms40Rb2->setEnabled(false);
     ms40Rb2->setChecked(true);
@@ -84,7 +88,6 @@ void MainWidget::initWidgetGraphicsGb()
     beamSb->setRange(1, 4);
     beamSb->setEnabled(false);
     saveCalBtn->setEnabled(false);
-    clearCalBtn->setEnabled(false);
     // Init Object's Locations
     graphicsGb = new QGroupBox(tr("Расчет / Графики"));
     QGridLayout *graphicsLayout = new QGridLayout(graphicsGb);
@@ -94,9 +97,8 @@ void MainWidget::initWidgetGraphicsGb()
     graphicsLayout->addWidget(beamLbl,      2, 0, 1, 1);
     graphicsLayout->addWidget(beamSb,       2, 1, 1, 1);
     graphicsLayout->addWidget(saveCalBtn,   3, 0, 1, 2);
-    graphicsLayout->addWidget(clearCalBtn,  4, 0, 1, 2);
     // Init Object's connections
-//    connect(calcAfcCalcBtn, SIGNAL(clicked()), this, SLOT(calAfcCalcAndSave()));
+    connect(saveCalBtn, SIGNAL(clicked()), this, SLOT(onSaveCalBtn()));
     connect(beamSb, SIGNAL(valueChanged(int)), this, SLOT(updateGraphics()));
     connect(ms40Rb2, SIGNAL(toggled(bool)), this, SLOT(updateGraphics()));
 }
@@ -139,8 +141,7 @@ void MainWidget::initFunctionalModels()
     calibrator = new Calibrator2;
     timer = new QTimer;
     // Init Object's Properties
-    readPanelStatus(ST_CONNECT_FAIL);
-    panel->cmdGetVersion();
+
     // Init Object's connections
     connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
     connect(panel, SIGNAL(cmdCalAfcStatusReady(int, bool)),
@@ -173,6 +174,16 @@ void MainWidget::performNoteToArpTable()
 
 void MainWidget::onCheckConnectBtn()
 {
+    progressBar->setValue(0);
+    ms40Rb->clearFocus();
+    if (ms40Rb->isChecked()) {
+        qDebug() << "checked";
+        ms40Rb->setChecked(false);
+    }
+
+//    else if (ms80Rb->isChecked())
+//        ms80Rb->setChecked(true);
+    readPanelStatus(ST_CONNECT_FAIL);
     panel->cmdGetVersion();
     qDebug() << "Check connect";
 }
@@ -200,11 +211,7 @@ void MainWidget::onMs80Rb(bool ms80)
 
 void MainWidget::onStartCalBtn()
 {
-//    if (ms40Rb->isChecked())
-//        calData[1].resize(0);
-//    if (ms80Rb->isChecked())
-//        calData[0].resize(0);
-    panel->cmdCalAfcSetCtrlGetStatus(calCyclesLe->text().toInt(), false);
+    panel->cmdCalAfcSetCtrl(calCyclesLe->text().toInt());
     progressBar->setRange(0, calCyclesLe->text().toInt());
     timer->start(500);
 }
@@ -213,7 +220,7 @@ void MainWidget::onTimeout()
 {
     switch (panel->getStatus()) {
     case ST_ACCUM_CALIBR_PERFOMING:
-        panel->cmdCalAfcSetCtrlGetStatus(0, true);
+        panel->cmdCalAfcGetStatus();
         break;
     case ST_READING_DATA_PERFOMING:
         panel->cmdCalAfcGetDataRepeat();
@@ -228,6 +235,11 @@ void MainWidget::onReadCalBtn()
     timer->start(500);
 }
 
+void MainWidget::onResetMprBtn()
+{
+    panel->cmdProgramResetMpr();
+}
+
 void MainWidget::calAfcStatus(int cycles, bool done)
 {
     qDebug("Cycles %d / %d, done: %d",
@@ -240,7 +252,7 @@ void MainWidget::calAfcStatus(int cycles, bool done)
     }
 }
 
-void MainWidget::calAfcCalcAndSave()
+void MainWidget::calAfcCalc()
 {
     QByteArray data;
     data.append(calData[0]);
@@ -248,12 +260,16 @@ void MainWidget::calAfcCalcAndSave()
     if (data.size() == 65536) {
         qDebug() << "Calibration calculating is started...";
         calibrator->Calibrate(data, calCyclesLe->text().toInt());
-        calibrator->SaveCalibration();
-        qDebug() << "Calibration is saved";
     }
     else {
         qDebug() << "Error! Wrong Data Size: " << data.size();
     }
+}
+
+void MainWidget::onSaveCalBtn()
+{
+    calibrator->SaveCalibration();
+    qDebug() << "Calibration is saved";
 }
 
 void MainWidget::calAfcGetData(QByteArray data)
@@ -275,54 +291,68 @@ void MainWidget::readPanelStatus(quint8 status)
     QString statusMsg;
     switch (status) {
     case ST_CONNECT_FAIL:
-        statusMsg.append("Подключение...");
-        setEnableWidgets(false, false, false, false, false, false,
-                         false, true, true, true, true, true);
+        statusMsg.append("ОШИБКА! Нет подключения!");
+        setEnableWidgets(true, false, false, false, false, false, false,
+                         true, true, true, true, true);
         break;
     case ST_CONNECT_READY:
-        statusMsg.append("Подключение восстановлено");
-        setEnableWidgets(true, false, false, false, false, false,
-                         false, true, true, true, true, true);
+        statusMsg.append("Подключение есть. ");
+        setEnableWidgets(true, true, false, false, false, false, false,
+                         true, true, true, true, true);
         break;
     case ST_READY_TO_SET_4080MS:
-        statusMsg.append("Запущен технологический боевой режим МПР. "
+        statusMsg.append("Подключение есть. Технологический боевой режим МПР. "
                          "Выберите режим: 40 или 80 мс");
-        setEnableWidgets(false, false, true, true, false, false,
-                         false, true, true, true, true, true);
+        setEnableWidgets(true, false, false, true, true, false, false,
+                         true, true, true, true, true);
+        if (ms40Rb->isChecked() || ms80Rb->isChecked())
+            onMs40Rb(ms40Rb->isChecked());
         break;
     case ST_READY_TO_START_CALIBR:
-        statusMsg.sprintf("Выбран режим %d мс. Введите количество "
+        statusMsg.sprintf("Подключение есть. Технологический боевой режим МПР. "
+                          "Выбран режим %d мс. Введите количество "
                           "циклов и запустите процесс калибровки.",
                           80 - 40 * (int)(ms40Rb->isChecked()));
-        setEnableWidgets(false, true, true, true, true, true,
-                         false, true, true, true, true, true);
+        setEnableWidgets(true, false, true, true, true, true, true,
+                         true, true, true, true, true);
         break;
     case ST_ACCUM_CALIBR_PERFOMING:
-        statusMsg.append("Выполняется процесс суммирования спектров...");
-        setEnableWidgets(false, false, false, false, false, false,
-                         false, true, true, true, true, true);
+        statusMsg.append("Подключение есть. Технологический боевой режим МПР. "
+                         "Выполняется процесс суммирования спектров...");
+        setEnableWidgets(false, false, false, false, false, false, false,
+                         true, true, true, true, true);
         break;
     case ST_READY_TO_READ_CALIBR_DATA:
-        statusMsg.append("Процесс суммирования спектров завершен. Данные готовы"
+        statusMsg.append("Подключение есть. Технологический боевой режим МПР. "
+                         "Процесс суммирования спектров завершен. Данные готовы"
                          " для чтения");
-        setEnableWidgets(false, true, true, true, true, true,
-                         false, true, true, true, true, true);
+        setEnableWidgets(true, false, false, false, false, false, true,
+                         true, true, true, true, true);
         break;
     case ST_READING_DATA_PERFOMING:
-        statusMsg.append("Выполняется процесс чтения спектров...");
-        setEnableWidgets(false, false, false, false, false, false,
-                         false, true, true, true, true, true);
+        statusMsg.append("Подключение есть. Технологический боевой режим МПР. "
+                         "Выполняется процесс чтения спектров...");
+        setEnableWidgets(false, false, false, false, false, false, false,
+                         true, true, true, true, true);
         break;
     case ST_READING_DATA_DONE:
         timer->stop();
-        calAfcCalcAndSave();
+        calAfcCalc();
         updateGraphics();
-        statusMsg.append("Чтение спектров завершено. Проведите расчет "
-                         "коэффициентов");
-        setEnableWidgets(false, true, true, true, true, true,
-                         false, true, true, true, true, true);
+        statusMsg.append("Подключение есть. Технологический боевой режим МПР. "
+                         "Чтение спектров завершено. Проведите анализ и "
+                         "сохраните поправочные характеристики АЧХ.");
+        setEnableWidgets(true, false, true, true, true, true, true,
+                         true, true, true, true, true);
+        break;
+    case ST_TELEM_MODE:
+        statusMsg.append("МПР в режиме телеметрии. Сбросьте МПР, чтобы "
+                         "продолжить");
+        setEnableWidgets(true, false, false, false, false, false, false,
+                         true, true, true, true, true);
         break;
     }
+
 
     statusLbl->setText(statusMsg);
 }
@@ -366,16 +396,16 @@ void MainWidget::setEnableWidgets(
         bool en9, bool en10, bool en11, bool en12
         )
 {
-    startTbModeBtn->setEnabled(en1);
-    calCyclesLe->setEnabled(en2);
-    ms80Rb->setEnabled(en3);
-    ms40Rb->setEnabled(en4);
-    startCalBtn->setEnabled(en5);
-    readCalBtn->setEnabled(en6);
-    resetMprBtn->setEnabled(en7);
-    ms40Rb2->setEnabled(en8);
-    ms80Rb2->setEnabled(en9);
-    beamSb->setEnabled(en10);
-    saveCalBtn->setEnabled(en11);
-    clearCalBtn->setEnabled(en12);
+    checkConnectBtn->setEnabled(en1);
+    startTbModeBtn->setEnabled(en2);
+    calCyclesLe->setEnabled(en3);
+    ms80Rb->setEnabled(en4);
+    ms40Rb->setEnabled(en5);
+    startCalBtn->setEnabled(en6);
+    readCalBtn->setEnabled(en7);
+    resetMprBtn->setEnabled(en8);
+    ms40Rb2->setEnabled(en9);
+    ms80Rb2->setEnabled(en10);
+    beamSb->setEnabled(en11);
+    saveCalBtn->setEnabled(en12);
 }

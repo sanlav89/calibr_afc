@@ -18,7 +18,9 @@ enum {
     ST_READY_TO_READ_CALIBR_DATA,
     ST_READING_DATA_PERFOMING,
     ST_READING_DATA_ERROR,
-    ST_READING_DATA_DONE
+    ST_READING_DATA_DONE,
+    ST_TELEM_MODE,
+    ST_RESET_MPR
 };
 
 class PanelConnect : public QObject
@@ -27,13 +29,16 @@ class PanelConnect : public QObject
 public:
     explicit PanelConnect(QObject *parent = 0);
     void cmdGetVersion();           // 0xA0
+    void cmdMainModeCheck();        // 0xAD
     void cmdMainModeStart();        // 0xAC
     void cmdMainModeSetParams();    // 0xB9
     void cmdMainModeSetFpga4080(bool ms40);  // 0xB6
     void cmdGetLastLog();           // 0xC9
-    void cmdCalAfcSetCtrlGetStatus(int cycles, bool status);
+    void cmdCalAfcSetCtrl(int cycles);
+    void cmdCalAfcGetStatus();
     void cmdCalAfcGetData(quint16 part_num);
     void cmdCalAfcGetDataRepeat();
+    void cmdProgramResetMpr();
     quint8 getStatus();
 
 private:
