@@ -59,6 +59,22 @@ PlotCalibr::PlotCalibr(
         curves[i]->attach(this);
         curves[i]->setPen(curvePen[i]);
     }
+
+    curves[0]->setTitle("Средний спектр из SRAM");
+    curves[1]->setTitle("Средний спектр с применением поправок");
+
+    // Инициализация легенд
+    SetLegendItem();
+}
+
+// Установить масштаб
+void PlotCalibr::UpdateCurves(double dataX[1024], double dataY[2][1024])
+{
+    // Обновление кривых
+    for (int i = 0; i < 2; i++) {
+        curves[i]->setSamples(dataX, &dataY[i][0], 1024);
+        replot();
+    }
 }
 
 // Установить масштаб осей координат
@@ -69,11 +85,19 @@ void PlotCalibr::SetScale(double Xmin, double Xmax, double Ymin, double Ymax)
     replot();
 }
 
-void PlotCalibr::UpdateCurves(double dataX[1024], double dataY[2][1024])
+// Установить "Легенду"
+void PlotCalibr::SetLegendItem()
 {
-    // Обновление кривых
-    for (int i = 0; i < 2; i++) {
-        curves[i]->setSamples(dataX, &dataY[i][0], 1024);
-        replot();
-    }
+    LegendItem * legend = new LegendItem;
+    legend->attach(this);
+    legend->setMaxColumns(1);
+    legend->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    legend->setBackgroundMode(QwtPlotLegendItem::BackgroundMode(0));
+    legend->setBorderRadius(4);
+    legend->setMargin(0);
+    legend->setSpacing(4);
+    legend->setItemMargin(2);
+    QFont legItemFont("Helvetica", 8);
+    legItemFont.setBold(false);
+    legend->setFont(legItemFont);
 }

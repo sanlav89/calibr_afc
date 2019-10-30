@@ -72,6 +72,31 @@ private:
     }
 };
 
+/// ------------------------------------------------------------
+/// Класс LegendItem
+/// ------------------------------------------------------------
+#include <qwt_plot_legenditem.h>
+
+class LegendItem: public QwtPlotLegendItem
+{
+public:
+    LegendItem()
+    {
+        setRenderHint( QwtPlotItem::RenderAntialiased );
+
+        QColor color( Qt::white );
+
+        setTextPen( color );
+#if 1
+        setBorderPen( color );
+
+        QColor c( Qt::gray );
+        c.setAlpha( 200 );
+
+        setBackgroundBrush( c );
+#endif
+    }
+};
 
 
 #endif // HELPERS_H

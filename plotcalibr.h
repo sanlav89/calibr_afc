@@ -25,6 +25,7 @@ public:
 
 private:
     QwtPlotCurve* curves[2];
+    void SetLegendItem();
 };
 
 
