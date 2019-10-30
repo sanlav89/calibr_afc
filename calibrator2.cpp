@@ -105,15 +105,15 @@ void Calibrator2::Calibrate(QByteArray data, int cal_count)
 }
 
 // Вернуть указатель на средние спектры калибровки
-double* Calibrator2::GetSrcSpectrums()
+double* Calibrator2::GetSrcSpectrums(quint8 ms40, quint8 b_num)
 {
-    return &spectr[0][0][0];
+    return &spectr[ms40][b_num][0];
 }
 
 // Вернуть указатель на поправочную характеристику АЧХ
-double* Calibrator2::GetCompAfc()
+double* Calibrator2::GetCompAfc(quint8 ms40, quint8 b_num)
 {
-    return &comp_afc[0][0][0];
+    return &comp_afc[ms40][b_num][0];
 }
 
 // Сохранить коэффициенты комп. АЧХ и соответствующие поправки к идеальной КХ
@@ -187,8 +187,8 @@ void Calibrator2::SaveCalibration(bool saveDbgInfo)
             qDebug() << f_comp.fileName() << "is not opened";
         }
         else {
-            f_sp.write((char*)GetSrcSpectrums(), ALL_SPECTR_SIZE);
-            f_comp.write((char*)GetCompAfc(), ALL_SPECTR_SIZE);
+            f_sp.write((char*)GetSrcSpectrums(0, 0), ALL_SPECTR_SIZE);
+            f_comp.write((char*)GetCompAfc(0, 0), ALL_SPECTR_SIZE);
         }
         if (f_sp.isOpen())
             f_sp.close();

@@ -16,9 +16,15 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwidget.cpp \
     panelconnect.cpp \
-    calibrator2.cpp
+    calibrator2.cpp \
+    plotcalibr.cpp
 
 HEADERS  += mainwidget.h \
     panelconnect.h \
     disstypedef.h \
-    calibrator2.h
+    calibrator2.h \
+    plotcalibr.h \
+    helpers.h
+
+INCLUDEPATH += C:/qwt-6.1.3/include
+LIBS += -LC:/qwt-6.1.3/lib -lqwt

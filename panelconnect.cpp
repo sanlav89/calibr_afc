@@ -11,6 +11,7 @@ PanelConnect::PanelConnect(QObject *parent) : QObject(parent)
     dissIPAddr = QHostAddress("192.168.1.163");
     connect(udpConnect, SIGNAL(readyRead()),
             this, SLOT(processPendingDatagrams()));
+    status = ST_CONNECT_FAIL;
 }
 
 /*
@@ -109,6 +110,16 @@ void PanelConnect::cmdCalAfcGetData(quint16 part_num)
                  QByteArray::fromRawData((char*)&part_num, 2));
 }
 
+void PanelConnect::cmdCalAfcGetDataRepeat()
+{
+    cmdCalAfcGetData(part_num_send);
+}
+
+quint8 PanelConnect::getStatus()
+{
+    return status;
+}
+
 /*
  * Чтение ответного пакета из сокета и обработка ответа
  */
@@ -147,6 +158,7 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
             switch (cmd_rec) {
             case PANEL_BUILD_MK:
                 qDebug() << "Version is read";
+                status = ST_CONNECT_READY;
                 break;
             case PANEL_TECH_MODE_SET:
                 qDebug() << "Main mode params is setted...";
@@ -154,10 +166,18 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
                 break;
             case PANEL_MAIN_MODE_SET:
                 qDebug() << "Main mode is started...";
+                status = ST_READY_TO_SET_4080MS;
+                break;
+            case PANEL_40_80_SET:
+                qDebug() << "Mode 40/80 is set...";
+                status = ST_READY_TO_START_CALIBR;
                 break;
             case PANEL_AFCCAL_SETCTRL_GETSTAT:
                 cal_done = data_rec[2];
                 calibrate_afc_cnt = *((int*)&data_rec[3]);
+                status = ST_ACCUM_CALIBR_PERFOMING;
+                if (cal_done)
+                    status = ST_READY_TO_READ_CALIBR_DATA;
                 emit cmdCalAfcStatusReady(calibrate_afc_cnt, cal_done);
                 break;
             case PANEL_AFCCAL_GET_DATA:
@@ -169,15 +189,19 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
                     calData.append(QByteArray::fromRawData(
                                        (char*)&data_rec[4], 64));
                     qDebug() << "Read part" << part_num_rec + 1 << "of" << 512;
+                    status = ST_READING_DATA_PERFOMING;
+                    emit cmdCalAfcGetDataPartReady(part_num_rec);
                     if (part_num_rec == 511) {
                         emit cmdCalAfcDataReady(calData);
+                        status = ST_READING_DATA_DONE;
                     }
                     else {
                         cmdCalAfcGetData(part_num_rec + 1);
                     }
                 }
                 else {
-                    qDebug() << "Error of reading SRAM part number";
+                    status = ST_READING_DATA_ERROR;
+                    qDebug() << "Error of reading SRAM part number" << part_num_rec;
                 }
                 break;
 
@@ -187,6 +211,8 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
                 break;
 
             }
+
+            emit panelStatus(status);
         }
         else if (cmd_rec_status == PANEL_ERROR)
             qDebug() << "Error";
