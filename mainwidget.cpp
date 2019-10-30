@@ -110,8 +110,8 @@ void MainWidget::initWidgetOther()
                 "АЧХ",
                 "Частота [Гц]",
                 "Амплитуда [дБ]",
-                QColor(125, 125, 125),
-                QColor(75, 75, 75));
+                QColor(75, 75, 75),
+                QColor(25, 25, 25));
     progressBar = new QProgressBar;
     statusLbl = new QLabel("Подключение...");
     // Init Object's Properties
@@ -301,7 +301,7 @@ void MainWidget::readPanelStatus(quint8 status)
                          true, true, true, true, true);
         break;
     case ST_READY_TO_SET_4080MS:
-        statusMsg.append("Подключение есть. Технологический боевой режим МПР. "
+        statusMsg.append("Подключение есть. Техн.-боевой режим МПР. "
                          "Выберите режим: 40 или 80 мс");
         setEnableWidgets(true, false, false, true, true, false, false,
                          true, true, true, true, true);
@@ -309,7 +309,7 @@ void MainWidget::readPanelStatus(quint8 status)
             onMs40Rb(ms40Rb->isChecked());
         break;
     case ST_READY_TO_START_CALIBR:
-        statusMsg.sprintf("Подключение есть. Технологический боевой режим МПР. "
+        statusMsg.sprintf("Подключение есть. Техн.-боевой режим МПР. "
                           "Выбран режим %d мс. Введите количество "
                           "циклов и запустите процесс калибровки.",
                           80 - 40 * (int)(ms40Rb->isChecked()));
@@ -317,20 +317,20 @@ void MainWidget::readPanelStatus(quint8 status)
                          true, true, true, true, true);
         break;
     case ST_ACCUM_CALIBR_PERFOMING:
-        statusMsg.append("Подключение есть. Технологический боевой режим МПР. "
+        statusMsg.append("Подключение есть. Техн.-боевой режим МПР. "
                          "Выполняется процесс суммирования спектров...");
         setEnableWidgets(false, false, false, false, false, false, false,
                          true, true, true, true, true);
         break;
     case ST_READY_TO_READ_CALIBR_DATA:
-        statusMsg.append("Подключение есть. Технологический боевой режим МПР. "
+        statusMsg.append("Подключение есть. Техн.-боевой режим МПР. "
                          "Процесс суммирования спектров завершен. Данные готовы"
                          " для чтения");
         setEnableWidgets(true, false, false, false, false, false, true,
                          true, true, true, true, true);
         break;
     case ST_READING_DATA_PERFOMING:
-        statusMsg.append("Подключение есть. Технологический боевой режим МПР. "
+        statusMsg.append("Подключение есть. Техн.-боевой режим МПР. "
                          "Выполняется процесс чтения спектров...");
         setEnableWidgets(false, false, false, false, false, false, false,
                          true, true, true, true, true);
@@ -339,7 +339,7 @@ void MainWidget::readPanelStatus(quint8 status)
         timer->stop();
         calAfcCalc();
         updateGraphics();
-        statusMsg.append("Подключение есть. Технологический боевой режим МПР. "
+        statusMsg.append("Подключение есть. Техн.-боевой режим МПР. "
                          "Чтение спектров завершено. Проведите анализ и "
                          "сохраните поправочные характеристики АЧХ.");
         setEnableWidgets(true, false, true, true, true, true, true,
@@ -353,7 +353,6 @@ void MainWidget::readPanelStatus(quint8 status)
         break;
     }
 
-
     statusLbl->setText(statusMsg);
 }
 
@@ -364,25 +363,31 @@ void MainWidget::setGraphData(bool ms40, quint8 b_num)
     double F = DFF / (2 - (int)ms40);
     double* pSpecData = calibrator->GetSrcSpectrums((quint8)ms40, b_num);
     double* pCompData = calibrator->GetCompAfc((quint8)ms40, b_num);
-    double ymin, ymax;
+    double ymin, ymax1, ymax2, xmin = 0, xmax = 0;
 
     ymin = 10 * log10(pSpecData[CUT_AFC_POS] * pCompData[CUT_AFC_POS] / 2);
-    ymax = 10 * log10(pSpecData[CUT_AFC_POS]);
+    ymax1 = 10 * log10(pSpecData[CUT_AFC_POS]);
+    ymax2 = ymin;
     for (int i = 0; i < 1024; i++) {
         freqscale[i] = -F / 2 + i * F / 1024;
         dataY[0][i] = 10 * log10(pSpecData[i]);
         dataY[1][i] = 10 * log10(pSpecData[i] * pCompData[i] / 2);
         if (i >= CUT_AFC_POS && i < FFT_LENGTH - CUT_AFC_POS) {
-            if (dataY[0][i] > ymax) {
-                ymax = dataY[0][i];
+            if (dataY[0][i] > ymax1) {
+                ymax1 = dataY[0][i];
             }
             if (dataY[1][i] < ymin) {
+                xmin = freqscale[i];
                 ymin = dataY[1][i];
+            }
+            if (dataY[1][i] > ymax2) {
+                xmax = freqscale[i];
+                ymax2 = dataY[1][i];
             }
         }
     }
-    plotCalibr->UpdateCurves(freqscale, dataY);
-    plotCalibr->SetScale(-F / 2, F / 2, ymin - 1, ymax + 1);
+    plotCalibr->UpdateCurves(freqscale, dataY, xmin, ymin, xmax, ymax2);
+    plotCalibr->SetScale(-F / 2, F / 2, ymin - 1, ymax1 + 1);
 }
 
 void MainWidget::updateGraphics()
