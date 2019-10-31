@@ -1,9 +1,26 @@
+//==============================================================================
+// (C) Copyright 2019 MIET
+// Moscow, Zelenograd, Russia
+//
+// Device:      DISS
+// Module:      MPR
+// Component:   AFC calibration utility
+// File:        helpers.h
+// Function:    Helper Classes
+// Notes:
+// Author:      A.Lavrinenko
+//==============================================================================
 #ifndef HELPERS_H
 #define HELPERS_H
 
 #include <qwt_plot_canvas.h>
 #include <qwt_painter.h>
+#include <qwt_plot_legenditem.h>
 
+//==============================================================================
+/*
+ * Инициирует дизайн полотна для графика (Canvas)
+ */
 class Canvas: public QwtPlotCanvas
 {
 public:
@@ -71,12 +88,12 @@ private:
         setPalette( pal );
     }
 };
+//==============================================================================
 
-/// ------------------------------------------------------------
-/// Класс LegendItem
-/// ------------------------------------------------------------
-#include <qwt_plot_legenditem.h>
-
+//==============================================================================
+/*
+ * Инициирует поле информации о кривых на графике (легенду)
+ */
 class LegendItem: public QwtPlotLegendItem
 {
 public:
@@ -97,6 +114,6 @@ public:
 #endif
     }
 };
-
+//==============================================================================
 
 #endif // HELPERS_H
