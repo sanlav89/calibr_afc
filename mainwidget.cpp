@@ -40,6 +40,7 @@ void MainWidget::initWidgetTechModeGb()
     readCalBtn = new QPushButton("Прочитать\n память");
     resetMprBtn = new QPushButton("Сбросить\n МПР");
     checkConnectBtn = new QPushButton("Проверить\n соединение");
+    readErrorBtn =  new QPushButton("Прочитать\n код ошибки");
     // Init Object's Properties
     startTbModeBtn->setEnabled(false);
     calCyclesLe->setEnabled(false);
@@ -62,6 +63,7 @@ void MainWidget::initWidgetTechModeGb()
     techModeLayout->addWidget(startCalBtn,      6, 0, 1, 2);
     techModeLayout->addWidget(readCalBtn,       7, 0, 1, 2);
     techModeLayout->addWidget(resetMprBtn,      8, 0, 1, 2);
+    techModeLayout->addWidget(readErrorBtn,     9, 0, 1, 2);
     // Init Object's connections
     connect(checkConnectBtn, SIGNAL(clicked()),
             this, SLOT(onCheckConnectBtn()));
@@ -71,6 +73,7 @@ void MainWidget::initWidgetTechModeGb()
     connect(ms40Rb, SIGNAL(toggled(bool)), this, SLOT(onMs40Rb(bool)));
     connect(ms80Rb, SIGNAL(toggled(bool)), this, SLOT(onMs80Rb(bool)));
     connect(resetMprBtn, SIGNAL(clicked()), this, SLOT(onResetMprBtn()));
+    connect(readErrorBtn, SIGNAL(clicked()), this, SLOT(onReadErrorBtn()));
 }
 
 void MainWidget::initWidgetGraphicsGb()
@@ -241,6 +244,11 @@ void MainWidget::onResetMprBtn()
     panel->cmdProgramResetMpr();
 }
 
+void MainWidget::onReadErrorBtn()
+{
+    panel->cmdGetLastLog();
+}
+
 void MainWidget::calAfcStatus(int cycles, bool done)
 {
     qDebug("Cycles %d / %d, done: %d",
@@ -305,12 +313,12 @@ void MainWidget::readPanelStatus(quint8 status)
                          true, true, true, true, true);
         break;
     case ST_CONNECT_READY:
-        statusMsg.append("Подключение есть. ");
+        statusMsg.append("Подключено. ");
         setEnableWidgets(true, true, false, false, false, false, false,
                          true, true, true, true, true);
         break;
     case ST_READY_TO_SET_4080MS:
-        statusMsg.append("Подключение есть. Техн.-боевой режим МПР. "
+        statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Выберите режим: 40 или 80 мс");
         setEnableWidgets(true, false, false, true, true, false, false,
                          true, true, true, true, true);
@@ -318,7 +326,7 @@ void MainWidget::readPanelStatus(quint8 status)
             onMs40Rb(ms40Rb->isChecked());
         break;
     case ST_READY_TO_START_CALIBR:
-        statusMsg.sprintf("Подключение есть. Техн.-боевой режим МПР. "
+        statusMsg.sprintf("Подключено. Техн.-боевой режим МПР. "
                           "Выбран режим %d мс. Введите количество "
                           "циклов и запустите процесс калибровки.",
                           80 - 40 * (int)(ms40Rb->isChecked()));
@@ -326,20 +334,20 @@ void MainWidget::readPanelStatus(quint8 status)
                          true, true, true, true, true);
         break;
     case ST_ACCUM_CALIBR_PERFOMING:
-        statusMsg.append("Подключение есть. Техн.-боевой режим МПР. "
+        statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Выполняется процесс суммирования спектров...");
         setEnableWidgets(false, false, false, false, false, false, false,
                          true, true, true, true, true);
         break;
     case ST_READY_TO_READ_CALIBR_DATA:
-        statusMsg.append("Подключение есть. Техн.-боевой режим МПР. "
+        statusMsg.append("Подключение. Техн.-боевой режим МПР. "
                          "Процесс суммирования спектров завершен. Данные готовы"
                          " для чтения");
         setEnableWidgets(true, false, false, false, false, false, true,
                          true, true, true, true, true);
         break;
     case ST_READING_DATA_PERFOMING:
-        statusMsg.append("Подключение есть. Техн.-боевой режим МПР. "
+        statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Выполняется процесс чтения спектров...");
         setEnableWidgets(false, false, false, false, false, false, false,
                          true, true, true, true, true);
@@ -348,17 +356,28 @@ void MainWidget::readPanelStatus(quint8 status)
         timer->stop();
         calAfcCalc();
         updateGraphics();
-        statusMsg.append("Подключение есть. Техн.-боевой режим МПР. "
+        statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Чтение спектров завершено. Проведите анализ и "
                          "сохраните поправочные характеристики АЧХ.");
         setEnableWidgets(true, false, true, true, true, true, true,
                          true, true, true, true, true);
         break;
     case ST_TELEM_MODE:
-        statusMsg.append("МПР в режиме телеметрии. Сбросьте МПР, чтобы "
-                         "продолжить");
+        statusMsg.append("Подключено. МПР в режиме телеметрии. Сбросьте МПР, "
+                         "чтобы продолжить");
         setEnableWidgets(true, false, false, false, false, false, false,
                          true, true, true, true, true);
+        break;
+    case ST_LAST_LOG_ERR:
+        statusMsg.sprintf("ОШИБКА! МПР в Отказе. Код ошибки: 0x%20X. "
+                          "Сбросьте МПР, чтобы продолжить", panel->getLogErr());
+        setEnableWidgets(true, false, false, false, false, false, false,
+                         true, true, true, true, true);
+        break;
+    case ST_LAST_LOG_SUCC:
+        statusMsg.append("Подключено. Все в порядке, отказа нет.");
+//        setEnableWidgets(true, false, false, false, false, false, false,
+//                         true, true, true, true, true);
         break;
     }
 

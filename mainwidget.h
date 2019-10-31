@@ -38,6 +38,7 @@ private:
     QPushButton* startCalBtn;
     QPushButton* readCalBtn;
     QPushButton* resetMprBtn;
+    QPushButton* readErrorBtn;
     // Объекты формы для расчета калибровки
     QGroupBox* graphicsGb;
     QLabel* mode4080Lbl2;
@@ -80,6 +81,7 @@ private slots:
     void onMs80Rb(bool ms80);
     void onReadCalBtn();
     void onResetMprBtn();
+    void onReadErrorBtn();
     void calAfcStatus(int cycles, bool done);
     void calAfcCalc();
     void onSaveCalBtn();
