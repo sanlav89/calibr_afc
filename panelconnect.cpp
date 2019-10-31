@@ -258,7 +258,7 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
                 } else {
                     status = ST_LAST_LOG_SUCC;
                 }
-                qDebug("Last Error is: 0x%02X", logErr);
+                qDebug("Last Error is: 0x%02X", lastLog->log.error);
                 break;
             }
 

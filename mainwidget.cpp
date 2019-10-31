@@ -16,9 +16,6 @@ MainWidget::MainWidget(QWidget *parent)
     initFunctionalModels();
     // Запись в ARP-таблицу
     performNoteToArpTable();
-    // Установка размера данных джля выполнения калибровки
-    calData[0].resize(32768);
-    calData[1].resize(32768);
     // Проверка соединения
     onCheckConnectBtn();
 }
@@ -85,6 +82,7 @@ void MainWidget::initWidgetGraphicsGb()
     beamLbl = new QLabel("Луч:");
     beamSb = new QSpinBox;
     saveCalBtn = new QPushButton("Сохранить\n калибровку");
+    clearCalBtn = new QPushButton("Очистить\n калибровку");
     // Init Object's Properties
     ms40Rb2->setEnabled(false);
     ms40Rb2->setChecked(true);
@@ -101,10 +99,12 @@ void MainWidget::initWidgetGraphicsGb()
     graphicsLayout->addWidget(beamLbl,      2, 0, 1, 1);
     graphicsLayout->addWidget(beamSb,       2, 1, 1, 1);
     graphicsLayout->addWidget(saveCalBtn,   3, 0, 1, 2);
+    graphicsLayout->addWidget(clearCalBtn,  4, 0, 1, 2);
     // Init Object's connections
     connect(saveCalBtn, SIGNAL(clicked()), this, SLOT(onSaveCalBtn()));
     connect(beamSb, SIGNAL(valueChanged(int)), this, SLOT(updateGraphics()));
     connect(ms40Rb2, SIGNAL(toggled(bool)), this, SLOT(updateGraphics()));
+    connect(clearCalBtn, SIGNAL(clicked()), this, SLOT(onClearCalBtn()));
 }
 
 void MainWidget::initWidgetOther()
@@ -145,6 +145,10 @@ void MainWidget::initFunctionalModels()
     calibrator = new Calibrator2;
     timer = new QTimer;
     // Init Object's Properties
+    for (int i = 0; i < 2; i++) {
+        calData[i].resize(32768);
+    }
+    onClearCalBtn();
 
     // Init Object's connections
     connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
@@ -266,9 +270,11 @@ void MainWidget::calAfcCalc()
     QByteArray data;
     data.append(calData[0]);
     data.append(calData[1]);
+    saveCalBtn->setEnabled(calDataReady[0] && calDataReady[1]);
     if (data.size() == 65536) {
         qDebug() << "Calibration calculating is started...";
         calibrator->Calibrate(data, calCyclesLe->text().toInt());
+        updateGraphics();
     }
     else {
         qDebug() << "Error! Wrong Data Size: " << data.size();
@@ -289,12 +295,26 @@ void MainWidget::onSaveCalBtn()
     }
 }
 
+void MainWidget::onClearCalBtn()
+{
+
+    for (int i = 0; i < 2; i++) {
+        memset(calData[i].data(), 0, calData[i].size());
+        calDataReady[i] = false;
+    }
+    calAfcCalc();
+}
+
 void MainWidget::calAfcGetData(QByteArray data)
 {
-    if (ms40Rb->isChecked())
+    if (ms40Rb->isChecked()) {
         calData[1] = data;
-    if (ms80Rb->isChecked())
+        calDataReady[1] = true;
+    }
+    if (ms80Rb->isChecked()) {
         calData[0] = data;
+        calDataReady[0] = true;
+    }
 }
 
 void MainWidget::calAfcReadDataPart(quint16 partNum)
@@ -355,7 +375,6 @@ void MainWidget::readPanelStatus(quint8 status)
     case ST_READING_DATA_DONE:
         timer->stop();
         calAfcCalc();
-        updateGraphics();
         statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Чтение спектров завершено. Проведите анализ и "
                          "сохраните поправочные характеристики АЧХ.");
@@ -440,5 +459,5 @@ void MainWidget::setEnableWidgets(
     ms40Rb2->setEnabled(en9);
     ms80Rb2->setEnabled(en10);
     beamSb->setEnabled(en11);
-    saveCalBtn->setEnabled(en12);
+//    saveCalBtn->setEnabled(en12);
 }
