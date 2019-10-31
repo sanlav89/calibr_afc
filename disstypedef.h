@@ -1605,8 +1605,8 @@ enum {
   PANEL_INDEX_MODULATION_GET,
   // A6 отправляет температуру 3х датчиков.
   PANEL_TEMPERATURE,
-  // A7 Установить параметры процесса калибровки АЧХ, прочитать состояние калибровки
-  PANEL_AFCCAL_SETCTRL_GETSTAT,
+  // A7 Резерв, всегда отвечает "Успех".
+  PANEL_COEFF_GET,
   // A8 отправляет 1 Кб журнала отказа.
   PANEL_LOG_ERROR_GET,
   // A9 очищает журнал отказа.
@@ -1663,10 +1663,10 @@ enum {
   PANEL_COMP_COEFF_SET,
   // C3 Чтение компенсирующих коэф. (пока в EEPROM).
   PANEL_COMP_COEFF_GET,
-  // C4 Резерв, всегда отвечает "Успех".
-  PANEL_COEFF_GET,
-  // C5 Чтение crc прошивки.
-  PANEL_READ_CRC_BIN,
+  // С4 Установить параметры процесса калибровки АЧХ
+  PANEL_AFCCAL_SETCTRL,
+  // С5 Прочитать состояние процесса калибровки
+  PANEL_AFCCAL_GETSTAT,
   // C6 Установить флаг калибровки данных.
   PANEL_CALIBRATED_SET,
   // C7 Установить данные CALIBRATED, серийный номер и REFDAC'и.

@@ -30,7 +30,16 @@ void PanelConnect::panelSendCmd(quint8 cmd, QByteArray data)
  */
 void PanelConnect::cmdGetVersion()
 {
+    status = ST_CONNECT_FAIL;
     panelSendCmd(PANEL_BUILD_MK);
+}
+
+/*
+ * Команда 0xAD - Проверка находится ли МПР в "технологическом боевом" режиме
+ */
+void PanelConnect::cmdMainModeCheck()
+{
+    panelSendCmd(PANEL_MAIN_MODE_GET);
 }
 
 /*
@@ -80,24 +89,40 @@ void PanelConnect::cmdGetLastLog()
 /*
  * Команда 0xD0 - начать калибровку поправок АЧХ
  */
-void PanelConnect::cmdCalAfcSetCtrlGetStatus(int cycles, bool status)
+void PanelConnect::cmdCalAfcSetCtrl(int cycles)
 {
     QByteArray data;
     calibr_afc_s calibr_afc;
-    if (!status) {
-        calibr_afc.get_status_only = 0;
-        calibr_afc.calibr_en = 1;
-        calibr_afc.cnt_max = cycles;
-    }
-    else {
-        calibr_afc.get_status_only = 1;
-        calibr_afc.calibr_en = 0;
-        calibr_afc.cnt_max = 0;
-    }
+    calibr_afc.get_status_only = 0;
+    calibr_afc.calibr_en = 1;
+    calibr_afc.cnt_max = cycles;
     data.append(QByteArray::fromRawData((char*)&calibr_afc,
                                         sizeof(calibr_afc_s)));
-    panelSendCmd(PANEL_AFCCAL_SETCTRL_GETSTAT, data);
-//    qDebug() << data.toHex();
+    panelSendCmd(PANEL_AFCCAL_SETCTRL, data);
+}
+
+void PanelConnect::cmdProgramResetMpr()
+{
+    TechModeUnion mainModeParams;
+    mainModeParams.f.missStartControl = 0;
+    mainModeParams.f.missLog = 0;
+    mainModeParams.f.banChange40_80 = 0;
+    mainModeParams.f.banChangeIm = 0;
+    mainModeParams.f.resetMK = 1;
+    mainModeParams.f.banFpga40ms = 0;
+    mainModeParams.f.banUseDAngles = 0;
+    mainModeParams.f.startFpgaIn40 = 0;
+    panelSendCmd(PANEL_TECH_MODE_SET,
+                 QByteArray::fromRawData((char*)&mainModeParams.v, 1));
+    status = ST_RESET_MPR;
+}
+
+/*
+ * Команда 0xD0 - начать калибровку поправок АЧХ
+ */
+void PanelConnect::cmdCalAfcGetStatus()
+{
+    panelSendCmd(PANEL_AFCCAL_GETSTAT);
 }
 
 /*
@@ -150,7 +175,6 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
     cmd_rec_status = data_rec[1];
 //    qDebug() << datagramRec.toHex();
     if (cmd_rec == cmd_send) {
-
         // Check error in answer
         if (cmd_rec_status == PANEL_DONE) {
             //            qDebug() << "Success";
@@ -158,11 +182,23 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
             switch (cmd_rec) {
             case PANEL_BUILD_MK:
                 qDebug() << "Version is read";
+                cmdMainModeCheck();
                 status = ST_CONNECT_READY;
                 break;
+            case PANEL_MAIN_MODE_GET:
+                if ((data_rec[2] >> 0) & 0x1) {
+                    status = ST_READY_TO_SET_4080MS;
+                } else if ((data_rec[2] >> 1) & 0x1) {
+                    status = ST_TELEM_MODE;
+                }
+                break;
             case PANEL_TECH_MODE_SET:
-                qDebug() << "Main mode params is setted...";
-                cmdMainModeStart();
+                if (status == ST_RESET_MPR) {
+                    status = ST_CONNECT_FAIL;
+                } else {
+                    qDebug() << "Main mode params is setted...";
+                    cmdMainModeStart();
+                }
                 break;
             case PANEL_MAIN_MODE_SET:
                 qDebug() << "Main mode is started...";
@@ -172,7 +208,10 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
                 qDebug() << "Mode 40/80 is set...";
                 status = ST_READY_TO_START_CALIBR;
                 break;
-            case PANEL_AFCCAL_SETCTRL_GETSTAT:
+            case PANEL_AFCCAL_SETCTRL:
+                status = ST_ACCUM_CALIBR_PERFOMING;
+                break;
+            case PANEL_AFCCAL_GETSTAT:
                 cal_done = data_rec[2];
                 calibrate_afc_cnt = *((int*)&data_rec[3]);
                 status = ST_ACCUM_CALIBR_PERFOMING;
@@ -214,8 +253,9 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
 
             emit panelStatus(status);
         }
-        else if (cmd_rec_status == PANEL_ERROR)
-            qDebug() << "Error";
+        else if (cmd_rec_status == PANEL_ERROR) {
+            qDebug() << "Error" << datagramRec.toHex();
+        }
 
     }
 }
