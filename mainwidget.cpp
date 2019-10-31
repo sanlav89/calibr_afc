@@ -16,8 +16,6 @@
 #include <QDebug>
 #include <QFileDialog>
 
-//using namespace PanelConnect;
-
 //==============================================================================
 MainWidget::MainWidget(QWidget *parent)
     : QWidget(parent)
