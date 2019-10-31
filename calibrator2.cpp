@@ -1,10 +1,26 @@
+//==============================================================================
+// (C) Copyright 2019 MIET
+// Moscow, Zelenograd, Russia
+//
+// Device:      DISS
+// Module:      MPR
+// Component:   AFC calibration utility
+// File:        calibrator2.cpp
+// Function:    Class, which calculates the compensation characteristic of the
+//              AFC
+// Notes:
+// Author:      A.Lavrinenko
+//==============================================================================
 #include "calibrator2.h"
 #include <QFile>
 #include <QTextStream>
 #include <QDataStream>
 #include <QDebug>
 
-// Идеальная компенсационная характеристика
+//==============================================================================
+/*
+ *  Идеальная компенсационная характеристика
+ */
 const uint16_t Calibrator2::ideal_comp_afc[] = {
             1,     1,     1,     1,     1,     1,     1,     1,     1,     1,     1,     1,     1,     1,     1,     1, // 15
             1,     1,     1,     1,     1,     1,     1,     1,     1,     1,     1,     1,     1,     1,     1,     1, // 31
@@ -72,12 +88,16 @@ const uint16_t Calibrator2::ideal_comp_afc[] = {
             1,     1,     1,     1,     1,     1,     1,     1,     1,     1,     1,     1,     1,     1,     1,     1  // 1023
     };
 
+/*
+ *
+ */
 Calibrator2::Calibrator2(QObject *parent) : QObject(parent)
 {
-
 }
 
-// Загрузить данные средних спектров калибровки и откалибровать АЧХ
+/*
+ * Загрузить данные средних спектров калибровки и откалибровать АЧХ
+ */
 void Calibrator2::Calibrate(QByteArray data, int cal_count)
 {
     // Копируем данные
@@ -104,20 +124,27 @@ void Calibrator2::Calibrate(QByteArray data, int cal_count)
 
 }
 
-// Вернуть указатель на средние спектры калибровки
+/*
+ * Вернуть указатель на средние спектры калибровки (для отображения на графике)
+ */
 double* Calibrator2::GetSrcSpectrums(quint8 ms40, quint8 b_num)
 {
     return &spectr[ms40][b_num][0];
 }
 
-// Вернуть указатель на поправочную характеристику АЧХ
+/*
+ * Вернуть указатель на поправочную характеристику АЧХ
+ * (для отображения на графике)
+ */
 double* Calibrator2::GetCompAfc(quint8 ms40, quint8 b_num)
 {
     return &comp_afc[ms40][b_num][0];
 }
 
-// Сохранить коэффициенты комп. АЧХ и соответствующие поправки к идеальной КХ
-// в файлы
+/*
+ * Сохранить коэффициенты комп. АЧХ и соответствующие поправки к идеальной КХ
+ * в файлы
+ */
 void Calibrator2::SaveCalibration(const QString &filename, bool saveDbgInfo)
 {
     QFile fileCoefs("comp_coefs.c");
@@ -197,8 +224,10 @@ void Calibrator2::SaveCalibration(const QString &filename, bool saveDbgInfo)
     }
 }
 
-// Заполнение 0-го (512-го) отсчета спектра
-// Заполняется средним по 10 соседним отсчетам
+/*
+ * Заполнение 0-го (512-го) отсчета спектра
+ * Заполняется средним по 10 соседним отсчетам
+ */
 void Calibrator2::FillSample0(uint8_t ms40, uint8_t b_num)
 {
     double sample0 = 0;
@@ -210,7 +239,9 @@ void Calibrator2::FillSample0(uint8_t ms40, uint8_t b_num)
     spectr[ms40][b_num][512] = sample0;
 }
 
-// Сглаживание среднего спектра калибровки и поиск минимума, максимума
+/*
+ * Сглаживание среднего спектра калибровки и поиск минимума, максимума
+ */
 void Calibrator2::Smooth(uint8_t ms40, uint8_t b_num, bool smoothEn)
 {
     int k;
@@ -252,7 +283,9 @@ void Calibrator2::Smooth(uint8_t ms40, uint8_t b_num, bool smoothEn)
     }
 }
 
-// Вычисление коэффициентов, компенсирующих АЧХ
+/*
+ * Вычисление коэффициентов, компенсирующих АЧХ
+ */
 void Calibrator2::CalcAfc(uint8_t ms40, uint8_t b_num)
 {
     // Нормировка компенсационной характеристики АЧХ по краям рабочей полосы
@@ -285,3 +318,4 @@ void Calibrator2::CalcAfc(uint8_t ms40, uint8_t b_num)
     for (int i = FFT_LENGTH - CUT_AFC_POS + 1; i < FFT_LENGTH; i++)
         comp_afc[ms40][b_num][i] = 1.0;
 }
+//==============================================================================

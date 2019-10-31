@@ -137,10 +137,6 @@ void MainWidget::initWidgetOther()
     // Init Object's Properties
     plotCalibr->setMinimumWidth(800);
     statusLbl->setFont(QFont("Helvetica", 8, QFont::Bold));
-    // Init Object's Locations
-
-    // Init Object's connections
-
 }
 
 void MainWidget::initMainLayout()
@@ -205,19 +201,21 @@ void MainWidget::setGraphData(bool ms40, quint8 b_num)
 {
     double freqscale[1024];
     double dataY[2][1024];
-    double F = DFF / (2 - (int)ms40);
+    double F = Calibrator2::DFF / (2 - (int)ms40);
     double* pSpecData = calibrator->GetSrcSpectrums((quint8)ms40, b_num);
     double* pCompData = calibrator->GetCompAfc((quint8)ms40, b_num);
     double ymin, ymax1, ymax2, xmin = 0, xmax = 0;
 
-    ymin = 10 * log10(pSpecData[CUT_AFC_POS] * pCompData[CUT_AFC_POS] / 2);
-    ymax1 = 10 * log10(pSpecData[CUT_AFC_POS]);
+    ymin = 10 * log10(pSpecData[Calibrator2::CUT_AFC_POS]
+            * pCompData[Calibrator2::CUT_AFC_POS] / 2);
+    ymax1 = 10 * log10(pSpecData[Calibrator2::CUT_AFC_POS]);
     ymax2 = ymin;
     for (int i = 0; i < 1024; i++) {
         freqscale[i] = -F / 2 + i * F / 1024;
         dataY[0][i] = 10 * log10(pSpecData[i]);
         dataY[1][i] = 10 * log10(pSpecData[i] * pCompData[i] / 2);
-        if (i >= CUT_AFC_POS && i < FFT_LENGTH - CUT_AFC_POS) {
+        if (i >= Calibrator2::CUT_AFC_POS && i < Calibrator2::FFT_LENGTH -
+                Calibrator2::CUT_AFC_POS) {
             if (dataY[0][i] > ymax1) {
                 ymax1 = dataY[0][i];
             }
@@ -284,12 +282,10 @@ void MainWidget::onCheckConnectBtn()
     progressBar->setValue(0);
     ms40Rb->clearFocus();
     if (ms40Rb->isChecked()) {
-        qDebug() << "checked";
         ms40Rb->setChecked(false);
     }
     processPanelStatus(ST_CONNECT_FAIL);
     panel->cmdGetVersion();
-    qDebug() << "Check connect";
 }
 
 void MainWidget::onStartTbModeBtn()
