@@ -24,7 +24,7 @@ public:
     double* GetCompAfc(quint8 ms40, quint8 b_num);
     // Сохранить коэффициенты комп. АЧХ и соответствующие поправки к идеальной
     // КХ в файлы
-    void SaveCalibration(bool saveDbgInfo = true);
+    void SaveCalibration(const QString &filename, bool saveDbgInfo = true);
 
 private:
     // Усредненные (суммарные) спектры калибровки по каждому лучу для каждого

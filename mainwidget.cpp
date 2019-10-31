@@ -2,6 +2,7 @@
 #include <QProcess>
 #include <QGridLayout>
 #include <QDebug>
+#include <QFileDialog>
 
 MainWidget::MainWidget(QWidget *parent)
     : QWidget(parent)
@@ -268,8 +269,16 @@ void MainWidget::calAfcCalc()
 
 void MainWidget::onSaveCalBtn()
 {
-    calibrator->SaveCalibration();
-    qDebug() << "Calibration is saved";
+    QString filename;
+    filename = QFileDialog::getSaveFileName(
+                this,
+                tr("Сохранить файл поправок"),
+                QDir::current().absolutePath(),
+                tr("TXT (*.txt)"));
+    if (!filename.isNull()) {
+        calibrator->SaveCalibration(filename);
+        qDebug() << "Calibration is saved";
+    }
 }
 
 void MainWidget::calAfcGetData(QByteArray data)

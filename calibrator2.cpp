@@ -118,10 +118,10 @@ double* Calibrator2::GetCompAfc(quint8 ms40, quint8 b_num)
 
 // Сохранить коэффициенты комп. АЧХ и соответствующие поправки к идеальной КХ
 // в файлы
-void Calibrator2::SaveCalibration(bool saveDbgInfo)
+void Calibrator2::SaveCalibration(const QString &filename, bool saveDbgInfo)
 {
     QFile fileCoefs("comp_coefs.c");
-    QFile fileCoefCorrs("comp_afc_coefs_bxxx.txt");
+    QFile fileCoefCorrs(filename);
     QFile f_sp("CAL_SP.dat"), f_comp("CAL_COMP.dat");
     QTextStream sc(&fileCoefs);
     QTextStream scc(&fileCoefCorrs);
