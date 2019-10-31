@@ -12,6 +12,7 @@ PanelConnect::PanelConnect(QObject *parent) : QObject(parent)
     connect(udpConnect, SIGNAL(readyRead()),
             this, SLOT(processPendingDatagrams()));
     status = ST_CONNECT_FAIL;
+    logErr = 0x0;
 }
 
 /*
@@ -145,6 +146,11 @@ quint8 PanelConnect::getStatus()
     return status;
 }
 
+quint8 PanelConnect::getLogErr()
+{
+    return logErr;
+}
+
 /*
  * Чтение ответного пакета из сокета и обработка ответа
  */
@@ -246,9 +252,14 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
 
             case PANEL_LAST_LOG_GET:
                 lastLog = (EthLogErrorStructTypeDef*)&data_rec[2];
+                logErr = lastLog->log.error;
+                if (logErr) {
+                    status = ST_LAST_LOG_ERR;
+                } else {
+                    status = ST_LAST_LOG_SUCC;
+                }
                 qDebug("Last Error is: 0x%02X", lastLog->log.error);
                 break;
-
             }
 
             emit panelStatus(status);

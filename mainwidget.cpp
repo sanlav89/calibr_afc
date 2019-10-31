@@ -2,6 +2,7 @@
 #include <QProcess>
 #include <QGridLayout>
 #include <QDebug>
+#include <QFileDialog>
 
 MainWidget::MainWidget(QWidget *parent)
     : QWidget(parent)
@@ -15,9 +16,6 @@ MainWidget::MainWidget(QWidget *parent)
     initFunctionalModels();
     // Запись в ARP-таблицу
     performNoteToArpTable();
-    // Установка размера данных джля выполнения калибровки
-    calData[0].resize(32768);
-    calData[1].resize(32768);
     // Проверка соединения
     onCheckConnectBtn();
 }
@@ -39,6 +37,7 @@ void MainWidget::initWidgetTechModeGb()
     readCalBtn = new QPushButton("Прочитать\n память");
     resetMprBtn = new QPushButton("Сбросить\n МПР");
     checkConnectBtn = new QPushButton("Проверить\n соединение");
+    readErrorBtn =  new QPushButton("Прочитать\n код ошибки");
     // Init Object's Properties
     startTbModeBtn->setEnabled(false);
     calCyclesLe->setEnabled(false);
@@ -61,6 +60,7 @@ void MainWidget::initWidgetTechModeGb()
     techModeLayout->addWidget(startCalBtn,      6, 0, 1, 2);
     techModeLayout->addWidget(readCalBtn,       7, 0, 1, 2);
     techModeLayout->addWidget(resetMprBtn,      8, 0, 1, 2);
+    techModeLayout->addWidget(readErrorBtn,     9, 0, 1, 2);
     // Init Object's connections
     connect(checkConnectBtn, SIGNAL(clicked()),
             this, SLOT(onCheckConnectBtn()));
@@ -70,6 +70,7 @@ void MainWidget::initWidgetTechModeGb()
     connect(ms40Rb, SIGNAL(toggled(bool)), this, SLOT(onMs40Rb(bool)));
     connect(ms80Rb, SIGNAL(toggled(bool)), this, SLOT(onMs80Rb(bool)));
     connect(resetMprBtn, SIGNAL(clicked()), this, SLOT(onResetMprBtn()));
+    connect(readErrorBtn, SIGNAL(clicked()), this, SLOT(onReadErrorBtn()));
 }
 
 void MainWidget::initWidgetGraphicsGb()
@@ -81,6 +82,7 @@ void MainWidget::initWidgetGraphicsGb()
     beamLbl = new QLabel("Луч:");
     beamSb = new QSpinBox;
     saveCalBtn = new QPushButton("Сохранить\n калибровку");
+    clearCalBtn = new QPushButton("Очистить\n калибровку");
     // Init Object's Properties
     ms40Rb2->setEnabled(false);
     ms40Rb2->setChecked(true);
@@ -97,10 +99,12 @@ void MainWidget::initWidgetGraphicsGb()
     graphicsLayout->addWidget(beamLbl,      2, 0, 1, 1);
     graphicsLayout->addWidget(beamSb,       2, 1, 1, 1);
     graphicsLayout->addWidget(saveCalBtn,   3, 0, 1, 2);
+    graphicsLayout->addWidget(clearCalBtn,  4, 0, 1, 2);
     // Init Object's connections
     connect(saveCalBtn, SIGNAL(clicked()), this, SLOT(onSaveCalBtn()));
     connect(beamSb, SIGNAL(valueChanged(int)), this, SLOT(updateGraphics()));
     connect(ms40Rb2, SIGNAL(toggled(bool)), this, SLOT(updateGraphics()));
+    connect(clearCalBtn, SIGNAL(clicked()), this, SLOT(onClearCalBtn()));
 }
 
 void MainWidget::initWidgetOther()
@@ -115,7 +119,8 @@ void MainWidget::initWidgetOther()
     progressBar = new QProgressBar;
     statusLbl = new QLabel("Подключение...");
     // Init Object's Properties
-    plotCalibr->setMinimumWidth(700);
+    plotCalibr->setMinimumWidth(800);
+    statusLbl->setFont(QFont("Helvetica", 8, QFont::Bold));
     // Init Object's Locations
 
     // Init Object's connections
@@ -141,6 +146,10 @@ void MainWidget::initFunctionalModels()
     calibrator = new Calibrator2;
     timer = new QTimer;
     // Init Object's Properties
+    for (int i = 0; i < 2; i++) {
+        calData[i].resize(32768);
+    }
+    onClearCalBtn();
 
     // Init Object's connections
     connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
@@ -240,6 +249,11 @@ void MainWidget::onResetMprBtn()
     panel->cmdProgramResetMpr();
 }
 
+void MainWidget::onReadErrorBtn()
+{
+    panel->cmdGetLastLog();
+}
+
 void MainWidget::calAfcStatus(int cycles, bool done)
 {
     qDebug("Cycles %d / %d, done: %d",
@@ -257,9 +271,11 @@ void MainWidget::calAfcCalc()
     QByteArray data;
     data.append(calData[0]);
     data.append(calData[1]);
+    saveCalBtn->setEnabled(calDataReady[0] && calDataReady[1]);
     if (data.size() == 65536) {
         qDebug() << "Calibration calculating is started...";
         calibrator->Calibrate(data, calCyclesLe->text().toInt());
+        updateGraphics();
     }
     else {
         qDebug() << "Error! Wrong Data Size: " << data.size();
@@ -268,16 +284,38 @@ void MainWidget::calAfcCalc()
 
 void MainWidget::onSaveCalBtn()
 {
-    calibrator->SaveCalibration();
-    qDebug() << "Calibration is saved";
+    QString filename;
+    filename = QFileDialog::getSaveFileName(
+                this,
+                tr("Сохранить файл поправок"),
+                QDir::current().absolutePath(),
+                tr("TXT (*.txt)"));
+    if (!filename.isNull()) {
+        calibrator->SaveCalibration(filename);
+        qDebug() << "Calibration is saved";
+    }
+}
+
+void MainWidget::onClearCalBtn()
+{
+
+    for (int i = 0; i < 2; i++) {
+        memset(calData[i].data(), 0, calData[i].size());
+        calDataReady[i] = false;
+    }
+    calAfcCalc();
 }
 
 void MainWidget::calAfcGetData(QByteArray data)
 {
-    if (ms40Rb->isChecked())
+    if (ms40Rb->isChecked()) {
         calData[1] = data;
-    if (ms80Rb->isChecked())
+        calDataReady[1] = true;
+    }
+    if (ms80Rb->isChecked()) {
         calData[0] = data;
+        calDataReady[0] = true;
+    }
 }
 
 void MainWidget::calAfcReadDataPart(quint16 partNum)
@@ -289,70 +327,92 @@ void MainWidget::calAfcReadDataPart(quint16 partNum)
 void MainWidget::readPanelStatus(quint8 status)
 {
     QString statusMsg;
+    QPalette pal;
     switch (status) {
     case ST_CONNECT_FAIL:
         statusMsg.append("ОШИБКА! Нет подключения!");
+        pal.setColor(QPalette::WindowText, Qt::darkRed);
         setEnableWidgets(true, false, false, false, false, false, false,
                          true, true, true, true, true);
         break;
     case ST_CONNECT_READY:
-        statusMsg.append("Подключение есть. ");
+        statusMsg.append("Подключено. ");
+        pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(true, true, false, false, false, false, false,
                          true, true, true, true, true);
         break;
     case ST_READY_TO_SET_4080MS:
-        statusMsg.append("Подключение есть. Техн.-боевой режим МПР. "
+        statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Выберите режим: 40 или 80 мс");
+        pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(true, false, false, true, true, false, false,
                          true, true, true, true, true);
         if (ms40Rb->isChecked() || ms80Rb->isChecked())
             onMs40Rb(ms40Rb->isChecked());
         break;
     case ST_READY_TO_START_CALIBR:
-        statusMsg.sprintf("Подключение есть. Техн.-боевой режим МПР. "
+        statusMsg.sprintf("Подключено. Техн.-боевой режим МПР. "
                           "Выбран режим %d мс. Введите количество "
                           "циклов и запустите процесс калибровки.",
                           80 - 40 * (int)(ms40Rb->isChecked()));
+        pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(true, false, true, true, true, true, true,
                          true, true, true, true, true);
         break;
     case ST_ACCUM_CALIBR_PERFOMING:
-        statusMsg.append("Подключение есть. Техн.-боевой режим МПР. "
+        statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Выполняется процесс суммирования спектров...");
+        pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(false, false, false, false, false, false, false,
                          true, true, true, true, true);
         break;
     case ST_READY_TO_READ_CALIBR_DATA:
-        statusMsg.append("Подключение есть. Техн.-боевой режим МПР. "
+        statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Процесс суммирования спектров завершен. Данные готовы"
-                         " для чтения");
+                         " для чтения.");
+        pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(true, false, false, false, false, false, true,
                          true, true, true, true, true);
         break;
     case ST_READING_DATA_PERFOMING:
-        statusMsg.append("Подключение есть. Техн.-боевой режим МПР. "
+        statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Выполняется процесс чтения спектров...");
+        pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(false, false, false, false, false, false, false,
                          true, true, true, true, true);
         break;
     case ST_READING_DATA_DONE:
         timer->stop();
         calAfcCalc();
-        updateGraphics();
-        statusMsg.append("Подключение есть. Техн.-боевой режим МПР. "
+        statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Чтение спектров завершено. Проведите анализ и "
                          "сохраните поправочные характеристики АЧХ.");
+        pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(true, false, true, true, true, true, true,
                          true, true, true, true, true);
         break;
     case ST_TELEM_MODE:
-        statusMsg.append("МПР в режиме телеметрии. Сбросьте МПР, чтобы "
-                         "продолжить");
+        statusMsg.append("Подключено. МПР в режиме телеметрии. Сбросьте МПР, "
+                         "чтобы продолжить");
+        pal.setColor(QPalette::WindowText, Qt::darkBlue);
         setEnableWidgets(true, false, false, false, false, false, false,
                          true, true, true, true, true);
         break;
+    case ST_LAST_LOG_ERR:
+        statusMsg.sprintf("ОШИБКА! МПР в Отказе. Код ошибки: 0x%20X. "
+                          "Сбросьте МПР, чтобы продолжить", panel->getLogErr());
+        pal.setColor(QPalette::WindowText, Qt::darkRed);
+        setEnableWidgets(true, false, false, false, false, false, false,
+                         true, true, true, true, true);
+        break;
+    case ST_LAST_LOG_SUCC:
+        statusMsg.append("Подключено. Все в порядке, отказа нет.");
+        pal.setColor(QPalette::WindowText, Qt::darkGreen);
+//        setEnableWidgets(true, false, false, false, false, false, false,
+//                         true, true, true, true, true);
+        break;
     }
-
+    statusLbl->setPalette(pal);
     statusLbl->setText(statusMsg);
 }
 
@@ -412,5 +472,5 @@ void MainWidget::setEnableWidgets(
     ms40Rb2->setEnabled(en9);
     ms80Rb2->setEnabled(en10);
     beamSb->setEnabled(en11);
-    saveCalBtn->setEnabled(en12);
+//    saveCalBtn->setEnabled(en12);
 }

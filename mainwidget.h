@@ -38,6 +38,7 @@ private:
     QPushButton* startCalBtn;
     QPushButton* readCalBtn;
     QPushButton* resetMprBtn;
+    QPushButton* readErrorBtn;
     // Объекты формы для расчета калибровки
     QGroupBox* graphicsGb;
     QLabel* mode4080Lbl2;
@@ -46,6 +47,7 @@ private:
     QLabel* beamLbl;
     QSpinBox* beamSb;
     QPushButton* saveCalBtn;
+    QPushButton* clearCalBtn;
     // Остальные объекты формы
     PlotCalibr* plotCalibr;
     QProgressBar* progressBar;
@@ -55,6 +57,7 @@ private:
     QTimer* timer;
     Calibrator2* calibrator;
     QByteArray calData[2];
+    bool calDataReady[2];
     // Инициализация объектов
     void initWidgetTechModeGb();
     void initWidgetGraphicsGb();
@@ -80,9 +83,11 @@ private slots:
     void onMs80Rb(bool ms80);
     void onReadCalBtn();
     void onResetMprBtn();
+    void onReadErrorBtn();
     void calAfcStatus(int cycles, bool done);
     void calAfcCalc();
     void onSaveCalBtn();
+    void onClearCalBtn();
     void calAfcGetData(QByteArray data);
     void calAfcReadDataPart(quint16 partNum);
     void readPanelStatus(quint8);

@@ -20,7 +20,9 @@ enum {
     ST_READING_DATA_ERROR,
     ST_READING_DATA_DONE,
     ST_TELEM_MODE,
-    ST_RESET_MPR
+    ST_RESET_MPR,
+    ST_LAST_LOG_ERR,
+    ST_LAST_LOG_SUCC
 };
 
 class PanelConnect : public QObject
@@ -32,7 +34,7 @@ public:
     void cmdMainModeCheck();        // 0xAD
     void cmdMainModeStart();        // 0xAC
     void cmdMainModeSetParams();    // 0xB9
-    void cmdMainModeSetFpga4080(bool ms40);  // 0xB6
+    void cmdMainModeSetFpga4080(bool ms40); // 0xB6
     void cmdGetLastLog();           // 0xC9
     void cmdCalAfcSetCtrl(int cycles);
     void cmdCalAfcGetStatus();
@@ -40,6 +42,7 @@ public:
     void cmdCalAfcGetDataRepeat();
     void cmdProgramResetMpr();
     quint8 getStatus();
+    quint8 getLogErr();
 
 private:
     QUdpSocket* udpConnect;
@@ -48,6 +51,7 @@ private:
     quint16 part_num_send;
     QByteArray calData;
     quint8 status;
+    quint8 logErr;
 
     void panelSendCmd(quint8 cmd, QByteArray data = QByteArray());
     void panelAnswerProcess(QByteArray datagramRec);
