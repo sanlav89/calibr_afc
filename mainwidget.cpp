@@ -119,7 +119,8 @@ void MainWidget::initWidgetOther()
     progressBar = new QProgressBar;
     statusLbl = new QLabel("Подключение...");
     // Init Object's Properties
-    plotCalibr->setMinimumWidth(700);
+    plotCalibr->setMinimumWidth(800);
+    statusLbl->setFont(QFont("Helvetica", 8, QFont::Bold));
     // Init Object's Locations
 
     // Init Object's connections
@@ -326,20 +327,24 @@ void MainWidget::calAfcReadDataPart(quint16 partNum)
 void MainWidget::readPanelStatus(quint8 status)
 {
     QString statusMsg;
+    QPalette pal;
     switch (status) {
     case ST_CONNECT_FAIL:
         statusMsg.append("ОШИБКА! Нет подключения!");
+        pal.setColor(QPalette::WindowText, Qt::darkRed);
         setEnableWidgets(true, false, false, false, false, false, false,
                          true, true, true, true, true);
         break;
     case ST_CONNECT_READY:
         statusMsg.append("Подключено. ");
+        pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(true, true, false, false, false, false, false,
                          true, true, true, true, true);
         break;
     case ST_READY_TO_SET_4080MS:
         statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Выберите режим: 40 или 80 мс");
+        pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(true, false, false, true, true, false, false,
                          true, true, true, true, true);
         if (ms40Rb->isChecked() || ms80Rb->isChecked())
@@ -350,25 +355,29 @@ void MainWidget::readPanelStatus(quint8 status)
                           "Выбран режим %d мс. Введите количество "
                           "циклов и запустите процесс калибровки.",
                           80 - 40 * (int)(ms40Rb->isChecked()));
+        pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(true, false, true, true, true, true, true,
                          true, true, true, true, true);
         break;
     case ST_ACCUM_CALIBR_PERFOMING:
         statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Выполняется процесс суммирования спектров...");
+        pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(false, false, false, false, false, false, false,
                          true, true, true, true, true);
         break;
     case ST_READY_TO_READ_CALIBR_DATA:
-        statusMsg.append("Подключение. Техн.-боевой режим МПР. "
+        statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Процесс суммирования спектров завершен. Данные готовы"
-                         " для чтения");
+                         " для чтения.");
+        pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(true, false, false, false, false, false, true,
                          true, true, true, true, true);
         break;
     case ST_READING_DATA_PERFOMING:
         statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Выполняется процесс чтения спектров...");
+        pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(false, false, false, false, false, false, false,
                          true, true, true, true, true);
         break;
@@ -378,28 +387,32 @@ void MainWidget::readPanelStatus(quint8 status)
         statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Чтение спектров завершено. Проведите анализ и "
                          "сохраните поправочные характеристики АЧХ.");
+        pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(true, false, true, true, true, true, true,
                          true, true, true, true, true);
         break;
     case ST_TELEM_MODE:
         statusMsg.append("Подключено. МПР в режиме телеметрии. Сбросьте МПР, "
                          "чтобы продолжить");
+        pal.setColor(QPalette::WindowText, Qt::darkBlue);
         setEnableWidgets(true, false, false, false, false, false, false,
                          true, true, true, true, true);
         break;
     case ST_LAST_LOG_ERR:
         statusMsg.sprintf("ОШИБКА! МПР в Отказе. Код ошибки: 0x%20X. "
                           "Сбросьте МПР, чтобы продолжить", panel->getLogErr());
+        pal.setColor(QPalette::WindowText, Qt::darkRed);
         setEnableWidgets(true, false, false, false, false, false, false,
                          true, true, true, true, true);
         break;
     case ST_LAST_LOG_SUCC:
         statusMsg.append("Подключено. Все в порядке, отказа нет.");
+        pal.setColor(QPalette::WindowText, Qt::darkGreen);
 //        setEnableWidgets(true, false, false, false, false, false, false,
 //                         true, true, true, true, true);
         break;
     }
-
+    statusLbl->setPalette(pal);
     statusLbl->setText(statusMsg);
 }
 
