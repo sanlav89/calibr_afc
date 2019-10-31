@@ -1,8 +1,24 @@
+//==============================================================================
+// (C) Copyright 2019 MIET
+// Moscow, Zelenograd, Russia
+//
+// Device:      DISS
+// Module:      MPR
+// Component:   AFC calibration utility
+// File:        plotcalibr.c
+// Function:    Object for displaying calibration information on a graph
+// Notes:
+// Author:      A.Lavrinenko
+//==============================================================================
 #include "plotcalibr.h"
 #include <qwt_plot_grid.h>
 #include <qwt_plot_layout.h>
 #include <qwt_symbol.h>
 
+//==============================================================================
+/*
+ * Объект для отображения информации о калибровке на графике
+ */
 PlotCalibr::PlotCalibr(
         QString title,
         QString xAxisTitle,
@@ -22,7 +38,9 @@ PlotCalibr::PlotCalibr(
     initMarkers();      // Инициализация маркеров
 }
 
-// Инициализация элементов графика
+/*
+ * Инициализация элементов графика
+ */
 void PlotCalibr::initCanvasDesign(
         QString title,
         QString xAxisTitle,
@@ -69,7 +87,9 @@ void PlotCalibr::initCanvasDesign(
     zoomer->setTrackerFont(zoomerFont);
 }
 
-// Инициализация кривых
+/*
+ * Инициализация кривых
+ */
 void PlotCalibr::initCurves()
 {
     QPen curvePen[2] = {
@@ -86,7 +106,9 @@ void PlotCalibr::initCurves()
     curves[1]->setTitle(" Средний спектр с применением поправок ");
 }
 
-// Установить "Легенду"
+/*
+ * Установить "Легенду"
+ */
 void PlotCalibr::initLegendItem()
 {
     LegendItem* legend = new LegendItem;
@@ -103,7 +125,9 @@ void PlotCalibr::initLegendItem()
     legend->setFont(legItemFont);
 }
 
-// Инициализация маркеров
+/*
+ * Инициализация маркеров
+ */
 void PlotCalibr::initMarkers()
 {
     for (int i = 0; i < 2; i++) {
@@ -128,7 +152,9 @@ void PlotCalibr::initMarkers()
     diffPeaksLabel->attach( this );
 }
 
-// Установить масштаб
+/*
+ * Установить масштаб
+ */
 void PlotCalibr::UpdateCurves(
         double dataX[1024],
         double dataY[2][1024],
@@ -158,7 +184,9 @@ void PlotCalibr::UpdateCurves(
     }
 }
 
-// Установить масштаб осей координат
+/*
+ * Установить масштаб осей координат
+ */
 void PlotCalibr::SetScale(double Xmin, double Xmax, double Ymin, double Ymax)
 {
     setAxisScale(QwtPlot::xBottom, Xmin, Xmax);
@@ -166,3 +194,4 @@ void PlotCalibr::SetScale(double Xmin, double Xmax, double Ymin, double Ymax)
     zoomer->setZoomBase();
     replot();
 }
+//==============================================================================

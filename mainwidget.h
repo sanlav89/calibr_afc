@@ -1,3 +1,15 @@
+//==============================================================================
+// (C) Copyright 2019 MIET
+// Moscow, Zelenograd, Russia
+//
+// Device:      DISS
+// Module:      MPR
+// Component:   AFC calibration utility
+// File:        mainwidget.h
+// Function:    GUI class
+// Notes:
+// Author:      A.Lavrinenko
+//==============================================================================
 #ifndef MAINWIDGET_H
 #define MAINWIDGET_H
 
@@ -15,8 +27,10 @@
 #include "plotcalibr.h"
 #include "helpers.h"
 
-#define DFF                 (1000000.0 / 39.0)      // Разрешение спектра
-
+//==============================================================================
+/*
+ * Класс GUI приложения
+ */
 class MainWidget : public QWidget
 {
     Q_OBJECT
@@ -58,7 +72,7 @@ private:
     Calibrator2* calibrator;
     QByteArray calData[2];
     bool calDataReady[2];
-    // Инициализация объектов
+    // Инициализация объектов GUI
     void initWidgetTechModeGb();
     void initWidgetGraphicsGb();
     void initWidgetOther();
@@ -66,34 +80,40 @@ private:
     void initFunctionalModels();
     // Выполнение записи в ARP-таблицу
     void performNoteToArpTable();
-    // Отображение кривых на графике
+    // Отображение данных на графике
     void setGraphData(bool ms40, quint8 b_num);
-    // Доступность элементов формы пользователю
+    // Доступность элементов GUI пользователю
     void setEnableWidgets(bool en1, bool en2, bool en3, bool en4,
                           bool en5, bool en6, bool en7, bool en8,
-                          bool en9, bool en10, bool en11, bool en12);
+                          bool en9, bool en10, bool en11);
+    // Произвести расчет поправочных коэффициентов АЧХ
+    void calAfcCalc();
 
 private slots:
+    // Обработчики нажания на элементы GUI
     void onCheckConnectBtn();
     void onStartTbModeBtn();
-    void onGetLastLogBtn();
-    void onStartCalBtn();
-    void onTimeout();
     void onMs40Rb(bool ms40);
     void onMs80Rb(bool ms80);
+    void onStartCalBtn();
     void onReadCalBtn();
     void onResetMprBtn();
     void onReadErrorBtn();
-    void calAfcStatus(int cycles, bool done);
-    void calAfcCalc();
     void onSaveCalBtn();
     void onClearCalBtn();
-    void calAfcGetData(QByteArray data);
+    // Обработчик таймаута по таймеру
+    void onTimeout();
+    // Обработчик готовности ответа команды cmdCalAfcGetStatus()
+    void calAfcStatus(int cycles, bool done);
+    // Обработчик готовности ответа команды cmdCalAfcGetData()
     void calAfcReadDataPart(quint16 partNum);
-    void readPanelStatus(quint8);
+    // Обработчик готовности данных, прочитанных из SRAM МПР
+    void calAfcGetData(QByteArray data);
+    // Обработчик слова состояния объекта "panel"
+    void processPanelStatus(quint8);
+    // Перерисовка графика
     void updateGraphics();
-
-
 };
+//==============================================================================
 
 #endif // MAINWIDGET_H

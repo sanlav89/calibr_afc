@@ -1,14 +1,26 @@
+//==============================================================================
+// (C) Copyright 2019 MIET
+// Moscow, Zelenograd, Russia
+//
+// Device:      DISS
+// Module:      MPR
+// Component:   AFC calibration utility
+// File:        panelconnect.с
+// Function:    Ethernet communications class
+// Notes:
+// Author:      A.Lavrinenko
+//==============================================================================
 #include "panelconnect.h"
 #include <QDebug>
 
+//==============================================================================
 /*
  * Создание объекта
  */
 PanelConnect::PanelConnect(QObject *parent) : QObject(parent)
 {
     udpConnect = new QUdpSocket(this);
-    udpConnect->bind(UDP_PORT_TELEM_MODE_IN, QUdpSocket::ShareAddress);
-    dissIPAddr = QHostAddress("192.168.1.163");
+    udpConnect->bind(UDP_PORT_IN, QUdpSocket::ShareAddress);
     connect(udpConnect, SIGNAL(readyRead()),
             this, SLOT(processPendingDatagrams()));
     status = ST_CONNECT_FAIL;
@@ -22,8 +34,7 @@ void PanelConnect::panelSendCmd(quint8 cmd, QByteArray data)
 {
     cmd_send = cmd;
     data.prepend(QByteArray::fromRawData((char*)&cmd, 1));
-    udpConnect->writeDatagram(data, dissIPAddr, UDP_PORT_TELEM_MODE_OUT);
-//    qDebug() << data.toHex();
+    udpConnect->writeDatagram(data, dissIPAddr, UDP_PORT_OUT);
 }
 
 /*
@@ -88,7 +99,7 @@ void PanelConnect::cmdGetLastLog()
 }
 
 /*
- * Команда 0xD0 - начать калибровку поправок АЧХ
+ * Команда 0xC4 - начать калибровку поправок АЧХ
  */
 void PanelConnect::cmdCalAfcSetCtrl(int cycles)
 {
@@ -102,6 +113,10 @@ void PanelConnect::cmdCalAfcSetCtrl(int cycles)
     panelSendCmd(PANEL_AFCCAL_SETCTRL, data);
 }
 
+/*
+ * Программный сброс модуля МПР
+ * Команда 0xB9 - выставиляется бит программного сброса
+ */
 void PanelConnect::cmdProgramResetMpr()
 {
     TechModeUnion mainModeParams;
@@ -119,7 +134,7 @@ void PanelConnect::cmdProgramResetMpr()
 }
 
 /*
- * Команда 0xD0 - начать калибровку поправок АЧХ
+ * Команда 0xС5 - запрос состояния процесса калибровки (суммирования спектров)
  */
 void PanelConnect::cmdCalAfcGetStatus()
 {
@@ -127,7 +142,8 @@ void PanelConnect::cmdCalAfcGetStatus()
 }
 
 /*
- * Команда 0xD2 - запрос анных спектров калибровки
+ * Команда 0xAE - запрос блока данных part_num, где хранятся просуммированные
+ * спектры
  */
 void PanelConnect::cmdCalAfcGetData(quint16 part_num)
 {
@@ -136,16 +152,25 @@ void PanelConnect::cmdCalAfcGetData(quint16 part_num)
                  QByteArray::fromRawData((char*)&part_num, 2));
 }
 
+/*
+ * Повторяет cmdCalAfcGetData() с последним part_num в случае отсутствия ответа
+ */
 void PanelConnect::cmdCalAfcGetDataRepeat()
 {
     cmdCalAfcGetData(part_num_send);
 }
 
+/*
+ * Вернуть состояние объекта PanelConnect
+ */
 quint8 PanelConnect::getStatus()
 {
     return status;
 }
 
+/*
+ * Вернуть последний код ошибки (отказа) МПР
+ */
 quint8 PanelConnect::getLogErr()
 {
     return logErr;
@@ -177,14 +202,13 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
     quint16 part_num_rec;
 
     quint8* data_rec = (quint8*)datagramRec.data();
-    cmd_rec = data_rec[0];
-    cmd_rec_status = data_rec[1];
-//    qDebug() << datagramRec.toHex();
+    quint8 cmd_rec = data_rec[0];
+    quint8 cmd_rec_status = data_rec[1];
     if (cmd_rec == cmd_send) {
-        // Check error in answer
+        // Проверка на ошибку в ответе
         if (cmd_rec_status == PANEL_DONE) {
-            //            qDebug() << "Success";
-            // Answer processing
+            // В зависимости от того, на какую команду пришел ответ, выполнить
+            // соответствующие действия
             switch (cmd_rec) {
             case PANEL_BUILD_MK:
                 qDebug() << "Version is read";
@@ -192,16 +216,19 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
                 status = ST_CONNECT_READY;
                 break;
             case PANEL_MAIN_MODE_GET:
-                if ((data_rec[2] >> 0) & 0x1) {
+                if ((data_rec[2] >> 0) & 0x1) {         // Техн.-боевой режим
                     status = ST_READY_TO_SET_4080MS;
-                } else if ((data_rec[2] >> 1) & 0x1) {
+                } else if ((data_rec[2] >> 1) & 0x1) {  // Режим "телеметрии"
                     status = ST_TELEM_MODE;
                 }
                 break;
             case PANEL_TECH_MODE_SET:
-                if (status == ST_RESET_MPR) {
+                // 2 варианта:
+                // 1) это ответ на команду cmdProgramResetMpr()
+                // 2) это ответ на команду cmdMainModeSetParams()
+                if (status == ST_RESET_MPR) {   // для 1 варианта
                     status = ST_CONNECT_FAIL;
-                } else {
+                } else {                        // для 2 варианта
                     qDebug() << "Main mode params is setted...";
                     cmdMainModeStart();
                 }
@@ -218,7 +245,8 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
                 status = ST_ACCUM_CALIBR_PERFOMING;
                 break;
             case PANEL_AFCCAL_GETSTAT:
-                cal_done = data_rec[2];
+                cal_done = data_rec[2];     // Флаг завершения процесса
+                                            // суммирования спектров
                 calibrate_afc_cnt = *((int*)&data_rec[3]);
                 status = ST_ACCUM_CALIBR_PERFOMING;
                 if (cal_done)
@@ -226,7 +254,8 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
                 emit cmdCalAfcStatusReady(calibrate_afc_cnt, cal_done);
                 break;
             case PANEL_AFCCAL_GET_DATA:
-                part_num_rec = *((quint16*)&data_rec[2]);
+                part_num_rec = *((quint16*)&data_rec[2]);   // Номер принятого
+                                                            // блока данных SRAM
                 if (part_num_rec == part_num_send) {
                     if (part_num_rec == 0) {
                         calData.resize(0);
@@ -236,7 +265,7 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
                     qDebug() << "Read part" << part_num_rec + 1 << "of" << 512;
                     status = ST_READING_DATA_PERFOMING;
                     emit cmdCalAfcGetDataPartReady(part_num_rec);
-                    if (part_num_rec == 511) {
+                    if (part_num_rec == 511) {  // Проверка на последний блок
                         emit cmdCalAfcDataReady(calData);
                         status = ST_READING_DATA_DONE;
                     }
@@ -246,7 +275,8 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
                 }
                 else {
                     status = ST_READING_DATA_ERROR;
-                    qDebug() << "Error of reading SRAM part number" << part_num_rec;
+                    qDebug() << "Error of reading SRAM part number"
+                             << part_num_rec;
                 }
                 break;
 
@@ -270,3 +300,4 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
 
     }
 }
+//==============================================================================

@@ -1,9 +1,22 @@
+//==============================================================================
+// (C) Copyright 2019 MIET
+// Moscow, Zelenograd, Russia
+//
+// Device:      DISS
+// Module:      MPR
+// Component:   AFC calibration utility
+// File:        mainwidget.cpp
+// Function:    GUI class
+// Notes:
+// Author:      A.Lavrinenko
+//==============================================================================
 #include "mainwidget.h"
 #include <QProcess>
 #include <QGridLayout>
 #include <QDebug>
 #include <QFileDialog>
 
+//==============================================================================
 MainWidget::MainWidget(QWidget *parent)
     : QWidget(parent)
 {
@@ -24,6 +37,9 @@ MainWidget::~MainWidget()
 {
 }
 
+/*
+ * Инициализация объектов GUI
+ */
 void MainWidget::initWidgetTechModeGb()
 {
     // Objects
@@ -91,7 +107,7 @@ void MainWidget::initWidgetGraphicsGb()
     beamSb->setEnabled(false);
     saveCalBtn->setEnabled(false);
     // Init Object's Locations
-    graphicsGb = new QGroupBox(tr("Расчет / Графики"));
+    graphicsGb = new QGroupBox(tr("Анализ АЧХ"));
     QGridLayout *graphicsLayout = new QGridLayout(graphicsGb);
     graphicsLayout->addWidget(mode4080Lbl2, 0, 0, 1, 2);
     graphicsLayout->addWidget(ms40Rb2,      1, 0, 1, 1);
@@ -121,10 +137,6 @@ void MainWidget::initWidgetOther()
     // Init Object's Properties
     plotCalibr->setMinimumWidth(800);
     statusLbl->setFont(QFont("Helvetica", 8, QFont::Bold));
-    // Init Object's Locations
-
-    // Init Object's connections
-
 }
 
 void MainWidget::initMainLayout()
@@ -158,13 +170,14 @@ void MainWidget::initFunctionalModels()
     connect(panel, SIGNAL(cmdCalAfcDataReady(QByteArray)),
             this, SLOT(calAfcGetData(QByteArray)));
     connect(panel, SIGNAL(panelStatus(quint8)),
-            this, SLOT(readPanelStatus(quint8)));
-    connect(panel, SIGNAL(cmdCalAfcGetDataPartReady(quint16)),
-            this, SLOT(calAfcReadDataPart(quint16)));
+            this, SLOT(processPanelStatus(quint8)));
     connect(panel, SIGNAL(cmdCalAfcGetDataPartReady(quint16)),
             this, SLOT(calAfcReadDataPart(quint16)));
 }
 
+/*
+ * Выполнение записи в ARP-таблицу
+ */
 void MainWidget::performNoteToArpTable()
 {
 // Запись в ARP-таблицу соответствия IP-адреса ДИСС с MAC-адресом
@@ -181,31 +194,103 @@ void MainWidget::performNoteToArpTable()
     prog->deleteLater();
 }
 
+/*
+ * Отображение данных на графике
+ */
+void MainWidget::setGraphData(bool ms40, quint8 b_num)
+{
+    double freqscale[1024];
+    double dataY[2][1024];
+    double F = Calibrator2::DFF / (2 - (int)ms40);
+    double* pSpecData = calibrator->GetSrcSpectrums((quint8)ms40, b_num);
+    double* pCompData = calibrator->GetCompAfc((quint8)ms40, b_num);
+    double ymin, ymax1, ymax2, xmin = 0, xmax = 0;
+
+    ymin = 10 * log10(pSpecData[Calibrator2::CUT_AFC_POS]
+            * pCompData[Calibrator2::CUT_AFC_POS] / 2);
+    ymax1 = 10 * log10(pSpecData[Calibrator2::CUT_AFC_POS]);
+    ymax2 = ymin;
+    for (int i = 0; i < 1024; i++) {
+        freqscale[i] = -F / 2 + i * F / 1024;
+        dataY[0][i] = 10 * log10(pSpecData[i]);
+        dataY[1][i] = 10 * log10(pSpecData[i] * pCompData[i] / 2);
+        if (i >= Calibrator2::CUT_AFC_POS && i < Calibrator2::FFT_LENGTH -
+                Calibrator2::CUT_AFC_POS) {
+            if (dataY[0][i] > ymax1) {
+                ymax1 = dataY[0][i];
+            }
+            if (dataY[1][i] < ymin) {
+                xmin = freqscale[i];
+                ymin = dataY[1][i];
+            }
+            if (dataY[1][i] > ymax2) {
+                xmax = freqscale[i];
+                ymax2 = dataY[1][i];
+            }
+        }
+    }
+    plotCalibr->UpdateCurves(freqscale, dataY, xmin, ymin, xmax, ymax2);
+    plotCalibr->SetScale(-F / 2, F / 2, ymin - 1, ymax1 + 1);
+}
+
+/*
+ * Доступность элементов GUI пользователю
+ */
+void MainWidget::setEnableWidgets(
+        bool en1, bool en2, bool en3, bool en4,
+        bool en5, bool en6, bool en7, bool en8,
+        bool en9, bool en10, bool en11
+        )
+{
+    checkConnectBtn->setEnabled(en1);
+    startTbModeBtn->setEnabled(en2);
+    calCyclesLe->setEnabled(en3);
+    ms80Rb->setEnabled(en4);
+    ms40Rb->setEnabled(en5);
+    startCalBtn->setEnabled(en6);
+    readCalBtn->setEnabled(en7);
+    resetMprBtn->setEnabled(en8);
+    ms40Rb2->setEnabled(en9);
+    ms80Rb2->setEnabled(en10);
+    beamSb->setEnabled(en11);
+}
+
+/*
+ * Произвести расчет поправочных коэффициентов АЧХ
+ */
+void MainWidget::calAfcCalc()
+{
+    QByteArray data;
+    data.append(calData[0]);
+    data.append(calData[1]);
+    saveCalBtn->setEnabled(calDataReady[0] && calDataReady[1]);
+    if (data.size() == 65536) {
+        qDebug() << "Calibration calculating is started...";
+        calibrator->Calibrate(data, calCyclesLe->text().toInt());
+        updateGraphics();
+    }
+    else {
+        qDebug() << "Error! Wrong Data Size: " << data.size();
+    }
+}
+
+/*
+ * Обработчики нажания на элементы GUI
+ */
 void MainWidget::onCheckConnectBtn()
 {
     progressBar->setValue(0);
     ms40Rb->clearFocus();
     if (ms40Rb->isChecked()) {
-        qDebug() << "checked";
         ms40Rb->setChecked(false);
     }
-
-//    else if (ms80Rb->isChecked())
-//        ms80Rb->setChecked(true);
-    readPanelStatus(ST_CONNECT_FAIL);
+    processPanelStatus(PanelConnect::ST_CONNECT_FAIL);
     panel->cmdGetVersion();
-    qDebug() << "Check connect";
 }
 
 void MainWidget::onStartTbModeBtn()
 {
-//    panel->cmdMainModeStart();
     panel->cmdMainModeSetParams();
-}
-
-void MainWidget::onGetLastLogBtn()
-{
-    panel->cmdGetLastLog();
 }
 
 void MainWidget::onMs40Rb(bool ms40)
@@ -225,18 +310,6 @@ void MainWidget::onStartCalBtn()
     timer->start(500);
 }
 
-void MainWidget::onTimeout()
-{
-    switch (panel->getStatus()) {
-    case ST_ACCUM_CALIBR_PERFOMING:
-        panel->cmdCalAfcGetStatus();
-        break;
-    case ST_READING_DATA_PERFOMING:
-        panel->cmdCalAfcGetDataRepeat();
-        break;
-    }
-}
-
 void MainWidget::onReadCalBtn()
 {
     panel->cmdCalAfcGetData(0);
@@ -252,34 +325,6 @@ void MainWidget::onResetMprBtn()
 void MainWidget::onReadErrorBtn()
 {
     panel->cmdGetLastLog();
-}
-
-void MainWidget::calAfcStatus(int cycles, bool done)
-{
-    qDebug("Cycles %d / %d, done: %d",
-           cycles, calCyclesLe->text().toInt(), done);
-    progressBar->setValue(cycles);
-    if (done) {
-        progressBar->setValue(calCyclesLe->text().toInt());
-        timer->stop();
-        qDebug() << "Calibration spectrums are ready...";
-    }
-}
-
-void MainWidget::calAfcCalc()
-{
-    QByteArray data;
-    data.append(calData[0]);
-    data.append(calData[1]);
-    saveCalBtn->setEnabled(calDataReady[0] && calDataReady[1]);
-    if (data.size() == 65536) {
-        qDebug() << "Calibration calculating is started...";
-        calibrator->Calibrate(data, calCyclesLe->text().toInt());
-        updateGraphics();
-    }
-    else {
-        qDebug() << "Error! Wrong Data Size: " << data.size();
-    }
 }
 
 void MainWidget::onSaveCalBtn()
@@ -306,6 +351,47 @@ void MainWidget::onClearCalBtn()
     calAfcCalc();
 }
 
+/*
+ * Обработчик таймаута по таймеру (timer)
+ */
+void MainWidget::onTimeout()
+{
+    switch (panel->getStatus()) {
+    case PanelConnect::ST_ACCUM_CALIBR_PERFOMING:
+        panel->cmdCalAfcGetStatus();
+        break;
+    case PanelConnect::ST_READING_DATA_PERFOMING:
+        panel->cmdCalAfcGetDataRepeat();
+        break;
+    }
+}
+
+/*
+ * Обработчик готовности ответа команды cmdCalAfcGetStatus()
+ */
+void MainWidget::calAfcStatus(int cycles, bool done)
+{
+    qDebug("Cycles %d / %d, done: %d",
+           cycles, calCyclesLe->text().toInt(), done);
+    progressBar->setValue(cycles);
+    if (done) {
+        progressBar->setValue(calCyclesLe->text().toInt());
+        timer->stop();
+        qDebug() << "Calibration spectrums are ready...";
+    }
+}
+
+/*
+ * Обработчик готовности ответа команды cmdCalAfcGetData(partNum)
+ */
+void MainWidget::calAfcReadDataPart(quint16 partNum)
+{
+    progressBar->setValue(partNum);
+}
+
+/*
+ *  Обработчик готовности всех данных, прочитанных из SRAM МПР
+ */
 void MainWidget::calAfcGetData(QByteArray data)
 {
     if (ms40Rb->isChecked()) {
@@ -318,70 +404,67 @@ void MainWidget::calAfcGetData(QByteArray data)
     }
 }
 
-void MainWidget::calAfcReadDataPart(quint16 partNum)
-{
-    progressBar->setValue(partNum);
-}
-
-
-void MainWidget::readPanelStatus(quint8 status)
+/*
+ * Обработчик слова состояния объекта "panel"
+ */
+void MainWidget::processPanelStatus(quint8 status)
 {
     QString statusMsg;
     QPalette pal;
     switch (status) {
-    case ST_CONNECT_FAIL:
+    case PanelConnect::ST_CONNECT_FAIL:
         statusMsg.append("ОШИБКА! Нет подключения!");
         pal.setColor(QPalette::WindowText, Qt::darkRed);
         setEnableWidgets(true, false, false, false, false, false, false,
-                         true, true, true, true, true);
+                         true, true, true, true);
         break;
-    case ST_CONNECT_READY:
+    case PanelConnect::ST_CONNECT_READY:
         statusMsg.append("Подключено. ");
         pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(true, true, false, false, false, false, false,
-                         true, true, true, true, true);
+                         true, true, true, true);
         break;
-    case ST_READY_TO_SET_4080MS:
+    case PanelConnect::ST_READY_TO_SET_4080MS:
         statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Выберите режим: 40 или 80 мс");
         pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(true, false, false, true, true, false, false,
-                         true, true, true, true, true);
+                         true, true, true, true);
         if (ms40Rb->isChecked() || ms80Rb->isChecked())
             onMs40Rb(ms40Rb->isChecked());
         break;
-    case ST_READY_TO_START_CALIBR:
+    case PanelConnect::ST_READY_TO_START_CALIBR:
         statusMsg.sprintf("Подключено. Техн.-боевой режим МПР. "
                           "Выбран режим %d мс. Введите количество "
                           "циклов и запустите процесс калибровки.",
                           80 - 40 * (int)(ms40Rb->isChecked()));
         pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(true, false, true, true, true, true, true,
-                         true, true, true, true, true);
+                         true, true, true, true);
         break;
-    case ST_ACCUM_CALIBR_PERFOMING:
+    case PanelConnect::ST_ACCUM_CALIBR_PERFOMING:
         statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Выполняется процесс суммирования спектров...");
         pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(false, false, false, false, false, false, false,
-                         true, true, true, true, true);
+                         true, true, true, true);
         break;
-    case ST_READY_TO_READ_CALIBR_DATA:
+    case PanelConnect::ST_READY_TO_READ_CALIBR_DATA:
         statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Процесс суммирования спектров завершен. Данные готовы"
                          " для чтения.");
         pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(true, false, false, false, false, false, true,
-                         true, true, true, true, true);
+                         true, true, true, true);
         break;
-    case ST_READING_DATA_PERFOMING:
+    case PanelConnect::ST_READING_DATA_PERFOMING:
         statusMsg.append("Подключено. Техн.-боевой режим МПР. "
                          "Выполняется процесс чтения спектров...");
         pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(false, false, false, false, false, false, false,
-                         true, true, true, true, true);
+                         true, true, true, true);
         break;
-    case ST_READING_DATA_DONE:
+    case PanelConnect::ST_READING_DATA_DONE:
         timer->stop();
         calAfcCalc();
         statusMsg.append("Подключено. Техн.-боевой режим МПР. "
@@ -389,23 +472,23 @@ void MainWidget::readPanelStatus(quint8 status)
                          "сохраните поправочные характеристики АЧХ.");
         pal.setColor(QPalette::WindowText, Qt::darkGreen);
         setEnableWidgets(true, false, true, true, true, true, true,
-                         true, true, true, true, true);
+                         true, true, true, true);
         break;
-    case ST_TELEM_MODE:
+    case PanelConnect::ST_TELEM_MODE:
         statusMsg.append("Подключено. МПР в режиме телеметрии. Сбросьте МПР, "
                          "чтобы продолжить");
         pal.setColor(QPalette::WindowText, Qt::darkBlue);
         setEnableWidgets(true, false, false, false, false, false, false,
-                         true, true, true, true, true);
+                         true, true, true, true);
         break;
-    case ST_LAST_LOG_ERR:
+    case PanelConnect::ST_LAST_LOG_ERR:
         statusMsg.sprintf("ОШИБКА! МПР в Отказе. Код ошибки: 0x%20X. "
                           "Сбросьте МПР, чтобы продолжить", panel->getLogErr());
         pal.setColor(QPalette::WindowText, Qt::darkRed);
         setEnableWidgets(true, false, false, false, false, false, false,
-                         true, true, true, true, true);
+                         true, true, true, true);
         break;
-    case ST_LAST_LOG_SUCC:
+    case PanelConnect::ST_LAST_LOG_SUCC:
         statusMsg.append("Подключено. Все в порядке, отказа нет.");
         pal.setColor(QPalette::WindowText, Qt::darkGreen);
 //        setEnableWidgets(true, false, false, false, false, false, false,
@@ -416,61 +499,11 @@ void MainWidget::readPanelStatus(quint8 status)
     statusLbl->setText(statusMsg);
 }
 
-void MainWidget::setGraphData(bool ms40, quint8 b_num)
-{
-    double freqscale[1024];
-    double dataY[2][1024];
-    double F = DFF / (2 - (int)ms40);
-    double* pSpecData = calibrator->GetSrcSpectrums((quint8)ms40, b_num);
-    double* pCompData = calibrator->GetCompAfc((quint8)ms40, b_num);
-    double ymin, ymax1, ymax2, xmin = 0, xmax = 0;
-
-    ymin = 10 * log10(pSpecData[CUT_AFC_POS] * pCompData[CUT_AFC_POS] / 2);
-    ymax1 = 10 * log10(pSpecData[CUT_AFC_POS]);
-    ymax2 = ymin;
-    for (int i = 0; i < 1024; i++) {
-        freqscale[i] = -F / 2 + i * F / 1024;
-        dataY[0][i] = 10 * log10(pSpecData[i]);
-        dataY[1][i] = 10 * log10(pSpecData[i] * pCompData[i] / 2);
-        if (i >= CUT_AFC_POS && i < FFT_LENGTH - CUT_AFC_POS) {
-            if (dataY[0][i] > ymax1) {
-                ymax1 = dataY[0][i];
-            }
-            if (dataY[1][i] < ymin) {
-                xmin = freqscale[i];
-                ymin = dataY[1][i];
-            }
-            if (dataY[1][i] > ymax2) {
-                xmax = freqscale[i];
-                ymax2 = dataY[1][i];
-            }
-        }
-    }
-    plotCalibr->UpdateCurves(freqscale, dataY, xmin, ymin, xmax, ymax2);
-    plotCalibr->SetScale(-F / 2, F / 2, ymin - 1, ymax1 + 1);
-}
-
+/*
+ * Перерисовка графика
+ */
 void MainWidget::updateGraphics()
 {
     setGraphData(ms40Rb2->isChecked(), beamSb->value() - 1);
 }
-
-void MainWidget::setEnableWidgets(
-        bool en1, bool en2, bool en3, bool en4,
-        bool en5, bool en6, bool en7, bool en8,
-        bool en9, bool en10, bool en11, bool en12
-        )
-{
-    checkConnectBtn->setEnabled(en1);
-    startTbModeBtn->setEnabled(en2);
-    calCyclesLe->setEnabled(en3);
-    ms80Rb->setEnabled(en4);
-    ms40Rb->setEnabled(en5);
-    startCalBtn->setEnabled(en6);
-    readCalBtn->setEnabled(en7);
-    resetMprBtn->setEnabled(en8);
-    ms40Rb2->setEnabled(en9);
-    ms80Rb2->setEnabled(en10);
-    beamSb->setEnabled(en11);
-//    saveCalBtn->setEnabled(en12);
-}
+//==============================================================================
