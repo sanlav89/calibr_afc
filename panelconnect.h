@@ -39,6 +39,7 @@ public:
     void cmdCalAfcGetDataRepeat();  // Повторяет cmdCalAfcGetData() с последним
                                     // part_num в случае отсутствия ответа
     void cmdProgramResetMpr();              // Техн. команда "0xB9"
+    void cmdSetBeamNum();
     quint8 getStatus();     // Вернуть состояние объекта PanelConnect
     quint8 getLogErr();     // Вернуть последний код ошибки (отказа) МПР
 

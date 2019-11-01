@@ -319,7 +319,8 @@ void MainWidget::onReadCalBtn()
 
 void MainWidget::onResetMprBtn()
 {
-    panel->cmdProgramResetMpr();
+//    panel->cmdProgramResetMpr();
+    panel->cmdSetBeamNum();
 }
 
 void MainWidget::onReadErrorBtn()
@@ -482,7 +483,7 @@ void MainWidget::processPanelStatus(quint8 status)
                          true, true, true, true);
         break;
     case PanelConnect::ST_LAST_LOG_ERR:
-        statusMsg.sprintf("ОШИБКА! МПР в Отказе. Код ошибки: 0x%20X. "
+        statusMsg.sprintf("ОШИБКА! МПР в Отказе. Код ошибки: [0x%02X]. "
                           "Сбросьте МПР, чтобы продолжить", panel->getLogErr());
         pal.setColor(QPalette::WindowText, Qt::darkRed);
         setEnableWidgets(true, false, false, false, false, false, false,

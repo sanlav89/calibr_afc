@@ -69,7 +69,7 @@ void PanelConnect::cmdMainModeSetParams()
 {
     TechModeUnion mainModeParams;
     mainModeParams.f.missStartControl = 1;
-    mainModeParams.f.missLog = 1;
+    mainModeParams.f.missLog = 0;
     mainModeParams.f.banChange40_80 = 1;
     mainModeParams.f.banChangeIm = 1;
     mainModeParams.f.resetMK = 0;
@@ -297,7 +297,12 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
         else if (cmd_rec_status == PANEL_ERROR) {
             qDebug() << "Error" << datagramRec.toHex();
         }
-
     }
 }
 //==============================================================================
+
+void PanelConnect::cmdSetBeamNum()
+{
+    QByteArray data = QByteArray::fromHex("0100");
+    panelSendCmd(PANEL_N_RAY_SET, data);
+}
