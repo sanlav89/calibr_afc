@@ -69,7 +69,7 @@ void PanelConnect::cmdMainModeSetParams()
 {
     TechModeUnion mainModeParams;
     mainModeParams.f.missStartControl = 1;
-    mainModeParams.f.missLog = 1;
+    mainModeParams.f.missLog = 0;
     mainModeParams.f.banChange40_80 = 1;
     mainModeParams.f.banChangeIm = 1;
     mainModeParams.f.resetMK = 0;
