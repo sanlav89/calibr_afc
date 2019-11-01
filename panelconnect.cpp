@@ -303,6 +303,11 @@ void PanelConnect::panelAnswerProcess(QByteArray datagramRec)
 
 void PanelConnect::cmdSetBeamNum()
 {
-    QByteArray data = QByteArray::fromHex("0100");
+    static quint16 beam = 0;
+    quint16 beam_en;
+    beam++;
+    beam &= 0x1;
+    beam_en = (beam << 8) & 0xFFFF;
+    QByteArray data = QByteArray::fromRawData((char*)&beam_en, 2);
     panelSendCmd(PANEL_N_RAY_SET, data);
 }
