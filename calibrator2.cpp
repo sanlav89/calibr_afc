@@ -16,6 +16,7 @@
 #include <QTextStream>
 #include <QDataStream>
 #include <QDebug>
+#include <math.h>
 
 //==============================================================================
 /*
@@ -156,6 +157,8 @@ void Calibrator2::SaveCalibration(const QString &filename, bool saveDbgInfo)
     int comp_coef_value;
     double comp_coef_corr;
     int16_t comp_coef_corr_value;
+
+    normTo2();
 
     if (!fileCoefs.open(QIODevice::WriteOnly)) {
         qDebug() << "Невозможно открыть файл" << fileCoefs.fileName();
@@ -318,4 +321,27 @@ void Calibrator2::CalcAfc(uint8_t ms40, uint8_t b_num)
     for (int i = FFT_LENGTH - CUT_AFC_POS + 1; i < FFT_LENGTH; i++)
         comp_afc[ms40][b_num][i] = 1.0;
 }
+
+/*
+ * Нормировка рассчитанной характеристики в диапазот [0..2]
+ */
+void Calibrator2::normTo2()
+{
+    for (int k = 0; k < ACCUM_MODES; k++) {
+        for (int j = 0; j < B_NUM_MAX; j++) {
+            double max = 0;
+            for (int i = 0; i < FFT_LENGTH; i++) {
+                if (comp_afc[k][j][i] > max) {
+                    max = comp_afc[k][j][i];
+                }
+            }
+            if (max > 2) {
+                for (int i = 0; i < FFT_LENGTH; i++) {
+                    comp_afc[k][j][i] *= 2 / max;
+                }
+            }
+        }
+    }
+}
+
 //==============================================================================

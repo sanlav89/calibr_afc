@@ -71,7 +71,7 @@ void PanelConnect::cmdMainModeSetParams()
     mainModeParams.f.missStartControl = 1;
     mainModeParams.f.missLog = 0;
     mainModeParams.f.banChange40_80 = 1;
-    mainModeParams.f.banChangeIm = 1;
+    mainModeParams.f.banChangeIm = 0;
     mainModeParams.f.resetMK = 0;
     mainModeParams.f.banFpga40ms = 0;
     mainModeParams.f.banUseDAngles = 0;

@@ -26,5 +26,5 @@ HEADERS  += mainwidget.h \
     plotcalibr.h \
     helpers.h
 
-INCLUDEPATH += C:/qwt-6.1.3/include
-LIBS += -LC:/qwt-6.1.3/lib -lqwt
+INCLUDEPATH += C:/qwt-6.1.4/include
+LIBS += -LC:/qwt-6.1.4/lib -lqwt
